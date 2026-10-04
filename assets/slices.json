@@ -1,9 +1,9 @@
 {
   "coordinate_system": "Selections use 1024x341 coordinates; mapped to each full-resolution original before slicing.",
   "sources": {
-    "motion": {"path":"user-pic/Gemini_Generated_Image_4v9kem4v9kem4v9k.jpg","tolerance":22},
-    "standing": {"path":"user-pic/Gemini_Generated_Image_o4a0r3o4a0r3o4a0.jpg","tolerance":27},
-    "weapon": {"path":"user-pic/Code_Generated_Image (2).png","tolerance":45}
+    "motion": {"path":"assets/source/superman-motion.jpg","tolerance":22},
+    "standing": {"path":"assets/source/superman-standing.jpg","tolerance":27},
+    "weapon": {"path":"assets/source/raos-edge.png","tolerance":45}
   },
   "workshop_preview": {
     "source": "standing",

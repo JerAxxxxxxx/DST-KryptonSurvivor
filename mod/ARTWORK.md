@@ -1,13 +1,16 @@
 # Artwork sources / 美术来源
 
-Character, portraits and Rao's Edge textures were extracted from the six images
-supplied by the project owner. The character depicts DC's Superman. The owner
-reported using Gemini for some supplied images; exact model versions are not
-inferred from filenames.
+Character, portraits and Rao's Edge textures were extracted from three source
+images supplied by the project owner, stored in the repository's assets/source/:
+superman-motion.jpg, superman-standing.jpg and raos-edge.png. These filenames
+were changed for organization; the image bytes remain identical to the originals.
+The character depicts DC's Superman. Some supplied images were generated with
+Gemini; exact model versions are not inferred from the original filenames.
 
 角色、头像和拉奥之锋贴图提取自用户提供的原图；角色身份为 DC 超人。
 只对已有像素抠图、切片、旋转、镜像和缩放，没有用程序重画人物或武器。
-完整来源记录见项目 assets/README.md 与 user-pic/。
+三张使用原图保存在项目 assets/source/，字节内容与收到的原图相同。
+完整来源与原始文件名记录见项目 assets/README.md。
 
 LICENSE applies to project code and documentation. Supplied artwork and derived
 textures retain their source attribution and are not relicensed by that file.

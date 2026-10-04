@@ -8,3 +8,15 @@ archive/
 *.py[cod]
 .DS_Store
 Thumbs.db
+
+# Local artwork inbox and agent working notes
+/user-pic/
+/AGENTS.md
+/docs/TODO.md
+/docs/character-design.md
+/docs/pending-decisions.md
+/docs/playtest.md
+/docs/repository.md
+/docs/task-status.md
+/docs/workshop-release-*.md
+/docs/workshop.md
