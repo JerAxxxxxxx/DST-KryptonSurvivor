@@ -1,0 +1,10 @@
+.tools/
+dist/
+__pycache__/
+node_modules/
+build/
+archive/
+.venv/
+*.py[cod]
+.DS_Store
+Thumbs.db

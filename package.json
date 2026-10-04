@@ -1,0 +1,15 @@
+{
+  "name": "krypton-survivor",
+  "version": "0.5.1",
+  "private": true,
+  "description": "Don't Starve Together character mod",
+  "scripts": {
+    "check": "node tools/check-mod.cjs",
+    "assets": "python tools/extract_user_art.py && python tools/build_custom_assets.py",
+    "preview": "python tools/preview_animation.py"
+  },
+  "devDependencies": {
+    "fengari": "0.1.5",
+    "luaparse": "0.3.1"
+  }
+}

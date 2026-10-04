@@ -1,0 +1,54 @@
+{
+  "coordinate_system": "Selections use 1024x341 coordinates; mapped to each full-resolution original before slicing.",
+  "sources": {
+    "motion": {"path":"user-pic/Gemini_Generated_Image_4v9kem4v9kem4v9k.jpg","tolerance":22},
+    "standing": {"path":"user-pic/Gemini_Generated_Image_o4a0r3o4a0r3o4a0.jpg","tolerance":27},
+    "weapon": {"path":"user-pic/Code_Generated_Image (2).png","tolerance":45}
+  },
+  "workshop_preview": {
+    "source": "standing",
+    "crop_pixels": [104, 0, 696, 592],
+    "output_size": [512, 512]
+  },
+  "placement": {
+    "head": {
+      "front":{"anchor":[180,226],"local_anchor":[0,18],"scale":1.12},
+      "side":{"anchor":[558,227],"local_anchor":[13,18],"scale":1.12},
+      "back":{"anchor":[859,215],"local_anchor":[0,18],"scale":1.12}
+    },
+    "body": {
+      "front":{"anchor":[175,225],"local_anchor":[0,-83],"scale":1.2},
+      "side":{"anchor":[523,226],"local_anchor":[0,-85],"scale":1.2},
+      "back":{"anchor":[854,217],"local_anchor":[0,-83],"scale":1.2}
+    }
+  },
+  "heatvision": {
+    "eyes": {
+      "front": {"source_points": [[156.829,154.372],[198.342,153.796]], "glow": true},
+      "side": {"source_points": [[554.09,149.764]], "glow": true},
+      "back": {"inherit": "front", "glow": false}
+    },
+    "beam": {
+      "left": -183, "right": 176, "pixels_per_unit": 150,
+      "glow_width": 0.5, "core_width": 0.16, "eye_glow_scale": 0.18
+    }
+  },
+  "selections": {
+    "head-front":{"source":"motion","polygon":[[98,40],[245,40],[245,175],[225,202],[204,218],[185,228],[171,228],[147,216],[127,193],[109,171],[98,146]]},
+    "head-side":{"source":"motion","polygon":[[445,40],[595,40],[597,151],[585,175],[581,216],[563,230],[545,230],[520,216],[491,188],[460,163],[445,130]]},
+    "head-back":{"source":"motion","polygon":[[770,40],[938,40],[940,175],[921,201],[898,218],[878,221],[851,215],[818,209],[796,191],[779,158]]},
+    "torso-front":{"source":"standing","polygon":[[154,225],[177,231],[197,222],[202,229],[202,244],[214,268],[228,287],[225,300],[211,308],[210,281],[199,278],[196,291],[186,283],[181,278],[158,278],[151,268],[149,247],[153,235]]},
+    "cape-front-right":{"source":"standing","polygon":[[197,221],[205,230],[211,252],[220,274],[230,286],[226,301],[211,308],[210,281],[198,278],[195,292],[187,284],[191,265],[193,241]]},
+    "torso-side":{"source":"standing","polygon":[[501,213],[522,224],[545,231],[541,251],[534,268],[529,279],[510,279],[508,270],[492,270],[488,268],[476,274],[466,268],[448,275],[435,284],[431,289],[427,273],[429,256],[451,247],[473,231],[490,217]]},
+    "torso-back":{"source":"standing","polygon":[[821,211],[842,219],[866,214],[883,219],[887,241],[899,264],[917,277],[933,302],[922,306],[916,294],[904,291],[893,295],[887,288],[886,304],[874,308],[866,301],[853,303],[847,296],[833,292],[826,286],[820,295],[809,295],[806,306],[801,301],[802,281],[812,258],[819,237]]},
+    "upper-arm":{"source":"standing","polygon":[[145,227],[153,230],[150,242],[145,252],[135,251],[138,239]]},
+    "forearm":{"source":"standing","polygon":[[136,249],[146,251],[141,270],[130,270],[132,260]]},
+    "empty-hand":{"source":"standing","polygon":[[129,270],[139,270],[149,276],[152,282],[148,289],[140,291],[129,289],[124,280]]},
+    "gripping-hand":{"source":"standing","polygon":[[242,212],[252,216],[264,218],[270,226],[268,235],[259,242],[249,240],[243,234]]},
+    "leg":{"source":"standing","polygon":[[162,279],[174,279],[172,302],[162,303],[159,292]]},
+    "bent-leg":{"source":"motion","polygon":[[524,273],[542,279],[551,285],[541,289],[530,296],[521,294],[532,285],[520,283]],"largest_component":false},
+    "foot":{"source":"standing","polygon":[[163,298],[172,299],[172,314],[154,319],[150,315],[159,307],[162,305]]},
+    "pelvis":{"source":"standing","polygon":[[157,269],[186,269],[187,281],[177,288],[171,283],[160,291],[155,284]]},
+    "portrait":{"source":"motion","polygon":[[85,35],[260,35],[260,335],[85,335]],"largest_component":false}
+  }
+}
