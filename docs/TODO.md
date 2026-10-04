@@ -9,10 +9,10 @@
 
 现有游戏外观已由用户测试，暂未发现问题。新增美术先保留规划，不在本轮重绘。
 
-## GitHub 发布（暂缓）
+## GitHub 发布（已完成）
 
-- [ ] 确定 GitHub 公开时间；拟用仓库名 DST-KryptonSurvivor。
-- [ ] 到用户明确要求时，再创建远程仓库、推送代码。
+- [x] 用户于 2026-10-04 明确授权上传 GitHub，公开仓库名 DST-KryptonSurvivor。
+- [x] 创建 [JerAxxxxxxx/DST-KryptonSurvivor](https://github.com/JerAxxxxxxx/DST-KryptonSurvivor)，成功推送 main 初始提交 4b83740（0.5.1）。
 
 ## Steam 创意工坊
 

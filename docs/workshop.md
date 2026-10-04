@@ -32,4 +32,4 @@
 
 上传工具中 Update Data、Update Preview Image 与 Update Details 的作用见 [Klei 官方上传教程](https://kleiforums.com/forums/topic/26494-dont-starve-steam-workshop-uploader/)。本次数据更新选择现有条目的 Edit 和 Update Data；已有封面保持原样，页面介绍可在工坊网页追加热视线说明，避免用 modinfo.lua 的短说明覆盖现有详细介绍。
 
-GitHub 公开和远程推送仍待用户确定。当前没有执行任何远程仓库操作。
+用户于 2026-10-04 明确授权上传 GitHub，已创建并推送公开仓库 [JerAxxxxxxx/DST-KryptonSurvivor](https://github.com/JerAxxxxxxx/DST-KryptonSurvivor)。GitHub 与 Steam 创意工坊分别更新；此记录不代表工坊 0.5.1 已上传成功。

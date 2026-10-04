@@ -1,5 +1,7 @@
 # Krypton Survivor · 氪星幸存者
 
+开源仓库：[JerAxxxxxxx/DST-KryptonSurvivor](https://github.com/JerAxxxxxxx/DST-KryptonSurvivor)。
+
 Steam《饥荒联机版》人物 Mod：超人和专属战斧 **拉奥之锋 / Rao's Edge**。当前本地版本 **0.5.1**，修正热视线从头后方发出的视觉问题；用户于 2026-10-04 复测后反馈暂无问题，准备发布。工坊已确认上传的版本仍为 **0.4.2**，尚未收到 0.5.1 上传成功确认。
 
 ## 已实现
@@ -59,8 +61,8 @@ python tools/check_assets.py
 
 本地代码和资源检查通过不等于游戏测试通过。请按 [实测清单](docs/playtest.md) 验证现有存档、联机和穿模情况。
 
-仓库拟用名 **DST-KryptonSurvivor**，本机登记账号 **JerAxxxxxxx**。项目代码和文档采用 [MIT](LICENSE)，六张原图已获用户同意收入仓库，来源与图片许可范围见 [素材来源](assets/README.md)。公开时间待定，尚未创建或推送远程仓库。
+项目已公开至 [**JerAxxxxxxx/DST-KryptonSurvivor**](https://github.com/JerAxxxxxxx/DST-KryptonSurvivor)，默认分支为 main。项目代码和文档采用 [MIT](LICENSE)，六张原图已获用户同意收入仓库，来源与图片许可范围见 [素材来源](assets/README.md)。本地历史、构建预览、安装包与依赖缓存不收入仓库。
 
 Steam 创意工坊 0.4.2 已由用户首次上传成功，条目 ID **3811663817**；0.5.1 总体复测暂无问题，待用户上传。后续更新同一条目，流程见 [工坊记录](docs/workshop.md)，中英文发布文案见 [0.5.1 更新说明](docs/workshop-release-0.5.1.md)。页面可见性、联机专项验证及新增美术见 [TODO](docs/TODO.md)。账号与仓库安排见 [仓库说明](docs/repository.md)。
 
-English: A Don't Starve Together character mod featuring Superman and Rao's Edge, with full night vision, daytime health/sanity regeneration, and intrinsic heat vision. Aim with the mouse and press R (locally configurable) to fire without equipment or resource cost. Direct hits exclude allies and structures; ignited creatures can spread native fire. Local version 0.5.1 adjusts eye anchoring and beam brightness; the user reports no issues after retesting and plans to publish it. Detailed multiplayer and equipment checks remain pending. Workshop item 3811663817 has only a confirmed 0.4.2 upload. Code and documentation use the MIT license; supplied artwork retains its source notes. GitHub publication is pending.
+English: A Don't Starve Together character mod featuring Superman and Rao's Edge, with full night vision, daytime health/sanity regeneration, and intrinsic heat vision. Aim with the mouse and press R (locally configurable) to fire without equipment or resource cost. Direct hits exclude allies and structures; ignited creatures can spread native fire. Local version 0.5.1 adjusts eye anchoring and beam brightness; the user reports no issues after retesting and plans to publish it. Detailed multiplayer and equipment checks remain pending. Workshop item 3811663817 has only a confirmed 0.4.2 upload. Source is publicly available at [JerAxxxxxxx/DST-KryptonSurvivor](https://github.com/JerAxxxxxxx/DST-KryptonSurvivor). Code and documentation use the MIT license; supplied artwork retains its source notes.

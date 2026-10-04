@@ -34,4 +34,10 @@ Lua 5.1 语法、原能力与热视线专项检查通过；资源重建后 135 �
 
 0.5.1 安装包包含 33 个文件，与 mod/ 来源一致，未打包原版游戏特效。用户退出游戏后已备份旧安装至 archive/installed-before-20261004-100657.zip，并安装及逐一校验 33 个文件。
 
-同日，用户完成本地 0.5.1 整体复测，反馈“测试完毕，暂无问题”，并准备发布新版本。整体游戏复测已完成；帽子、骑乘、洞穴、摄像机转向与远程客户端等未逐项确认的专项仍保留，清单见 docs/playtest.md。当前进入 0.5.1 发布准备，尚未收到新版创意工坊上传成功确认；已确认上传的版本仍为 0.4.2。GitHub 未创建或推送。
+同日，用户完成本地 0.5.1 整体复测，反馈“测试完毕，暂无问题”，并准备发布新版本。整体游戏复测已完成；帽子、骑乘、洞穴、摄像机转向与远程客户端等未逐项确认的专项仍保留，清单见 docs/playtest.md。进入 0.5.1 发布准备，尚未收到新版创意工坊上传成功确认；已确认上传的版本仍为 0.4.2。当时尚未创建或推送 GitHub，后续完成记录见下方。
+
+## 2026-10-04 · GitHub 公开与初始上传完成
+
+用户明确授权上传 GitHub。确认登录 JerAxxxxxxx 后，已创建公开仓库 [DST-KryptonSurvivor](https://github.com/JerAxxxxxxx/DST-KryptonSurvivor)，并成功推送 main 初始提交 [4b83740](https://github.com/JerAxxxxxxx/DST-KryptonSurvivor/commit/4b8374019a9aaaa0fdbacd5f80601e874ce1c923)。初始提交包含 0.5.1 的 75 个文件、MIT 代码与文档，以及用户允许公开的六张原图；archive/、build/、dist/、node_modules/、.tools/ 均未收入仓库。
+
+GitHub 公开与初始上传事项已完成，初始提交的 [GitHub 自动检查](https://github.com/JerAxxxxxxx/DST-KryptonSurvivor/actions/runs/37173421238) 已通过；本地 npm run check 与素材检查也已通过。工坊 0.5.1 上传成功仍待确认，已确认上传的工坊版本为 0.4.2。后续游戏专项与新增美术继续按 TODO 跟进。
