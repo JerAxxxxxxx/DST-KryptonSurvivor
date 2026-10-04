@@ -20,6 +20,10 @@ G.TUNING.KRYPTON_SURVIVOR = {
     heatvision_range = 20,
     heatvision_width = 0.8,
     heatvision_interval = 0.35,
+    flight_enabled = GetModConfigData("flight_enabled") ~= false,
+    flight_toggle_interval = 0.35,
+    map_teleport_enabled = GetModConfigData("map_teleport_enabled") ~= false,
+    map_teleport_interval = 0.35,
 }
 
 PrefabFiles = { "krypton_survivor", "krypton_staff", "krypton_heatvision_fx" }
@@ -53,8 +57,8 @@ S.NAMES.KRYPTON_STAFF = zh and "拉奥之锋" or "Rao's Edge"
 S.CHARACTER_TITLES.krypton_survivor = zh and "超人 · 氪星幸存者" or "Superman · Krypton Survivor"
 S.CHARACTER_NAMES.krypton_survivor = S.NAMES.KRYPTON_SURVIVOR
 S.CHARACTER_DESCRIPTIONS.krypton_survivor = zh
-    and "*生命、饥饿、理智上限各 10000\n*完整夜视，白天回血、恢复理智\n*热视线：按 R 远程攻击（按键可配置）\n*拉奥之锋：远距离范围攻击与采集"
-    or "*10,000 health, hunger and sanity\n*Full night vision and daytime health/sanity recovery\n*Heat vision: press R to fire (key configurable)\n*Rao's Edge: area attacks and harvesting"
+    and "*超高属性、完整夜视、白天恢复\n*热视线 R，飞行切换 V（按键可配置）\n*Ctrl＋地图右键瞬移\n*拉奥之锋：范围攻击与采集"
+    or "*Superpowered stats, night vision and daytime recovery\n*Heat vision R; flight toggle V (keys configurable)\n*Ctrl + right-click the map to teleport\n*Rao's Edge: area attacks and harvesting"
 S.CHARACTER_QUOTES.krypton_survivor = zh and '"希望，也能照亮这片荒野。"' or '"Hope can light this wilderness."'
 S.CHARACTER_SURVIVABILITY.krypton_survivor = zh and "超能力体验" or "Superpowered"
 S.SKIN_NAMES.krypton_survivor_none = S.NAMES.KRYPTON_SURVIVOR
@@ -82,13 +86,75 @@ end)
 AddModCharacter("krypton_survivor", "MALE")
 
 local HeatVision = require("krypton_heatvision")
+local Flight = require("krypton_flight")
+local MapTeleport = require("krypton_map_teleport")
 -- A stable namespace works for both local and Workshop folder names.
 local rpc_namespace = "KryptonSurvivor"
 AddModRPCHandler(rpc_namespace, "HeatVision", HeatVision.Cast)
+local ability_messages = zh and {
+    flight_on = "飞行已开启。",
+    flight_off = "已经着陆。",
+    cannot_land = "这里无法着陆，先飞回陆地或船上。",
+    riding = "先下坐骑，再使用这项能力。",
+    invalid_ground = "这里没有安全的瞬移落点。",
+    teleported = "瞬移成功，已抵达目标位置。",
+    blocked = "落点被挡住了，换个位置。",
+    restricted = "无法穿过这里的特殊屏障。",
+    paused = "游戏仍在暂停，请恢复游戏后再瞬移。",
+    busy = "请先结束当前动作，再使用瞬移。",
+    controls_disabled = "人物暂时无法操作，请恢复控制后再瞬移。",
+    unavailable = "当前人物状态无法使用这项能力。",
+    disabled = "服务器已关闭这项能力。",
+} or {
+    flight_on = "Flight enabled.",
+    flight_off = "Landed.",
+    cannot_land = "Fly back to land or a boat before landing.",
+    riding = "Dismount before using this ability.",
+    invalid_ground = "There is no safe teleport destination here.",
+    teleported = "Teleported to the selected location.",
+    blocked = "That spot is blocked. Try another location.",
+    restricted = "This special barrier blocks teleportation.",
+    paused = "The game is paused. Resume before teleporting.",
+    busy = "Finish your current action before teleporting.",
+    controls_disabled = "Regain character control before teleporting.",
+    unavailable = "This ability is unavailable in your current state.",
+    disabled = "The server has disabled this ability.",
+}
+local function SayAbilityResult(player, reason)
+    if player ~= nil and player:IsValid() and player.prefab == "krypton_survivor"
+        and not player:HasTag("playerghost") and player.components.talker ~= nil
+        and ability_messages[reason] ~= nil then
+        player.components.talker:Say(ability_messages[reason])
+    end
+end
+AddModRPCHandler(rpc_namespace, "ToggleFlight", function(player)
+    local success, reason = Flight.Toggle(player)
+    SayAbilityResult(player, success and (Flight.IsFlying(player) and "flight_on" or "flight_off") or reason)
+end)
+AddModRPCHandler(rpc_namespace, "MapTeleport", function(player, x, z)
+    local success, reason = MapTeleport.Cast(player, x, z)
+    if success then
+        SayAbilityResult(player, "teleported")
+    else
+        SayAbilityResult(player, reason)
+        -- Log only the rejection category, without player IDs or coordinates.
+        if reason ~= "cooldown" then print("[Krypton Survivor] MapTeleport rejected: " .. tostring(reason)) end
+    end
+end)
 local key_name = GetModConfigData("heatvision_key", true) or "KEY_R"
 local heatvision_keys = { KEY_R = G.KEY_R, KEY_G = G.KEY_G, KEY_Z = G.KEY_Z }
 local heatvision_key = key_name ~= "disabled" and (heatvision_keys[key_name] or G.KEY_R) or nil
 require("krypton_heatvision_input")(G, heatvision_key, function(x, z)
     SendModRPCToServer(GetModRPC(rpc_namespace, "HeatVision"), x, z)
 end)
-print("[Krypton Survivor] Registered krypton_survivor; version 0.5.1")
+local flight_key_name = GetModConfigData("flight_key", true) or "KEY_V"
+local flight_keys = { KEY_V = G.KEY_V, KEY_B = G.KEY_B }
+local flight_key = flight_key_name ~= "disabled" and (flight_keys[flight_key_name] or G.KEY_V) or nil
+require("krypton_flight_input")(G, flight_key, function()
+    SendModRPCToServer(GetModRPC(rpc_namespace, "ToggleFlight"))
+end)
+local map_mode = GetModConfigData("map_teleport_input", true) or "ctrl_right"
+AddClassPostConstruct("screens/mapscreen", require("krypton_map_teleport_input")(G, map_mode, function(x, z)
+    SendModRPCToServer(GetModRPC(rpc_namespace, "MapTeleport"), x, z)
+end))
+print("[Krypton Survivor] Registered krypton_survivor; version 0.6.2")

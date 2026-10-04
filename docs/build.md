@@ -23,11 +23,12 @@ python -m pip install -r requirements.txt
 
 ## 重建资源
 
-三张使用原图保存在 `assets/source/`，原始文件名与来源见 [素材说明](../assets/README.md)。选区、关节位置和眼部坐标保存在 `assets/slices.json`。调整选区或位置后，依次运行：
+使用原图保存在 `assets/source/`，原始文件名与来源见 [素材说明](../assets/README.md)。选区、关节位置和眼部坐标保存在 `assets/slices.json`。调整选区或位置后，依次运行：
 
 ```powershell
 python tools/extract_user_art.py
 python tools/build_custom_assets.py --game-dir "你的饥荒联机版安装目录"
+python tools/build_flight_assets.py
 python tools/preview_animation.py --game-dir "你的饥荒联机版安装目录"
 python tools/check_assets.py
 npm run check
@@ -44,6 +45,19 @@ npm run check
 
 `build/` 属于本地生成目录，不提交。预览使用编译后的 BILD 与本机游戏动画矩阵合成已有像素。
 
+## 飞行姿态
+
+飞行动作由用户提供的 `assets/source/superman-flight.jpg` 提取，不重新绘制人物。原图中的棋盘格背景是 JPG 像素，构建时用边缘连通背景生成 alpha；六个完整姿态的选区与位置记录在 `assets/slices.json` 的 `flight` 和 `selections` 中。
+
+```powershell
+python tools/build_flight_assets.py
+python tools/check_assets.py
+```
+
+此构建不依赖游戏安装，生成 `mod/anim/krypton_flight.zip` 中自有的 BILD v6、ANIM v4 与 KTEX 贴图。动作库为 `wilson`，自定义动作为 `krypton_flight_idle` 和 `krypton_flight_move`，均有正面、侧面、背面三个方向，每个方向 12 帧、12 fps。循环仅整体平移原图像素，悬浮幅度为三个像素。
+
+透明原始选区、缩放切片与来源哈希保存在 `build/art/flight/` 和 `build/flight-extraction-manifest.json`。预览从生成的编译包重新解码，输出 `build/previews/flight-poses.png`、`flight-contact-sheet.png`、`flight-loop.gif` 及各方向 GIF。检查六个姿态完整、没有混入相邻姿态或背景残片，并在游戏中确认镜像、动作切换、装备与帽子的表现。
+
 ## 热视线眼部定位
 
 瞳孔来源点和光束边界保存在 `assets/slices.json` 的 `heatvision` 中。`tools/build_custom_assets.py` 根据头部锚点与缩放生成 `mod/scripts/krypton_heatvision_visual_data.lua`；修改源坐标后重新构建，不直接编辑生成文件。正面两处瞳孔、侧面一处；背面继承正面双束位置，不生成眼部发光。
@@ -58,11 +72,11 @@ python tools/preview_heatvision.py --game-dir "你的饥荒联机版安装目录
 
 ## 检查
 
-修改 Lua 后运行 `npm run check`。检查覆盖 Lua 5.1 语法、资源引用、语言、选人模型、角色属性、装备、联机分支、采集、所有权、范围伤害、夜视与热视线。GitHub Actions 在推送和拉取请求时执行同一套检查，无需安装游戏。
+修改 Lua 后运行 `npm run check`。检查覆盖 Lua 5.1 语法、资源引用、语言、选人模型、角色属性、装备、联机分支、采集、所有权、范围伤害、夜视与热视线，以及飞行碰撞、存档、预测、视觉和地图瞬移的落点、权限、暂停恢复与输入焦点。GitHub Actions 在推送和拉取请求时执行同一套检查，无需安装游戏。
 
 重建图片后运行 `python tools/check_assets.py`，核对编译帧、贴图 mip 层、图集引用与可用的原图哈希，并检查生成的动作预览。
 
-游戏内验证可从新建世界和已有存档分别开始：启用服务器 Mod、选择超人，检查开局装备、采集、夜视、白天回血，以及热视线的瞄准、点燃和动作跟随；再检查戴帽、骑乘、洞穴切换、摄像机转向、保存读取与远程玩家加入。自动检查和几何预览不能替代这些游戏操作。
+游戏内验证可从新建世界和已有存档分别开始：启用服务器 Mod、选择超人，检查开局装备、采集、夜视、白天回血、热视线，以及飞行跨海与洞穴断层、安全着陆、地图瞬移和成功／失败提示；再检查戴帽、骑乘、洞穴切换、摄像机转向、保存读取与远程玩家加入。自动检查和几何预览不能替代这些游戏操作。
 
 ## 打包与安装
 

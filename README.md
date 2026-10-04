@@ -2,7 +2,7 @@
 
 Steam《饥荒联机版》超人人物 Mod。超高属性、完整夜视、热视线和专属战斧 **拉奥之锋 / Rao's Edge**，适合与朋友轻松探索和战斗。
 
-**当前版本：0.5.1，已发布至 Steam 创意工坊。** 支持中文和英语。
+**仓库版本：0.6.2。Steam 创意工坊版本：0.5.1，待更新。** 支持中文和英语。0.6.2 新增飞行与地图瞬移，跨海飞行与瞬移已进行游戏测试；洞穴与联机同步仍需进一步验证。工坊 0.5.1 暂不包含这两项能力。
 
 [Steam 创意工坊](https://steamcommunity.com/sharedfiles/filedetails/?id=3811663817) · [更新记录](docs/changelog.md) · [开发说明](docs/build.md)
 
@@ -27,6 +27,18 @@ Steam《饥荒联机版》超人人物 Mod。超高属性、完整夜视、热�
 
 聊天、界面操作和建筑放置时不会触发；忙碌、工作、死亡、幽灵及服务器暂停期间无法发射。
 
+## 飞行与地图瞬移（0.6.2）
+
+两项能力均由人物自带，无需装备，不消耗饥饿、理智、材料或耐久。
+
+- **飞行出生默认开启，按 V 切换**；每位玩家可改为 B 或关闭按键，服务器可关闭能力。可跨越海面与洞穴内部断层，墙、树等普通障碍仍保留碰撞。
+- 需要回到安全陆地或船上才能关闭飞行；海面或洞穴空洞上会拒绝着陆。骑乘时暂停飞行，切换飞行或地图瞬移前需下坐骑。
+- **打开地图，按住 Ctrl 并右键点选位置即可瞬移**；地图自动关闭，恢复游戏后执行，无距离或材料限制。目标限于当前世界分片；地表与洞穴之间仍通过入口切换。
+- 瞬移拒绝地图外、洞穴空洞、建筑或洞口占据的落点及原生特殊屏障。飞行开启时可选海面，关闭时只允许安全陆地或船上；普通地图拖动、缩放、右键与关闭操作保留。
+- 成功后提示“瞬移成功，已抵达目标位置。”；落点被挡住或人物忙碌、骑乘、暂停等情况会给出对应提示。
+
+悬浮待机与飞行移动使用用户提供的三方向原图。飞行循环采用空手姿态，暂不显示手持武器及帽子；攻击、采集和热视线恢复现有人物动作与装备显示，装备属性仍然生效。
+
 ## 专属战斧：拉奥之锋
 
 - 开局自带并自动装备，仅超人可以使用。
@@ -37,7 +49,7 @@ Steam《饥荒联机版》超人人物 Mod。超高属性、完整夜视、热�
 
 ## 安装与使用
 
-1. 在上方 Steam 创意工坊页面订阅。
+1. 在上方 Steam 创意工坊页面订阅稳定版 0.5.1。
 2. 在世界的**服务器模组**设置中启用本 Mod。
 3. 进入选人界面，选择**超人**。
 
@@ -47,6 +59,8 @@ Steam《饥荒联机版》超人人物 Mod。超高属性、完整夜视、热�
 
 ## 配置
 
+以下为仓库 0.6.2 的配置；工坊 0.5.1 不含飞行与地图瞬移设置。
+
 | 配置 | 可选值 | 默认值 |
 | --- | --- | --- |
 | 语言 | 自动、中文、英语 | 自动 |
@@ -54,8 +68,12 @@ Steam《饥荒联机版》超人人物 Mod。超高属性、完整夜视、热�
 | 战斧伤害 | 2000、10000、50000 | 2000 |
 | 热视线伤害 | 2000、10000、50000 | 2000 |
 | 热视线按键 | R、G、Z、关闭 | R |
+| 飞行能力（服务器） | 开启、关闭 | 开启 |
+| 飞行切换按键 | V、B、关闭按键 | V |
+| 地图瞬移能力（服务器） | 开启、关闭 | 开启 |
+| 地图瞬移操作 | Ctrl＋右键、关闭操作 | Ctrl＋右键 |
 
-热视线按键由每位玩家在自己的 Mod 配置中设置。
+热视线按键、飞行切换按键和地图瞬移操作由每位玩家在自己的 Mod 配置中设置。目前地图瞬移快捷操作面向键鼠，原手柄地图操作保留。
 
 ## 开发
 
@@ -79,3 +97,5 @@ npm run check
 A Superman character mod for **Don't Starve Together**, featuring powerful stats, full night vision, surface daytime health and sanity regeneration, innate heat vision, and the exclusive axe **Rao's Edge**. Version **0.5.1** is available on Steam Workshop.
 
 Subscribe and enable it under server mods, then select Superman. Aim with the mouse and press **R** to fire heat vision without equipment or resource cost. The key, damage, movement speed and language are configurable. Direct beam hits exclude allies and structures; ignited targets can spread native fire. Code and documentation use the MIT license; artwork retains the source notes linked above.
+
+Repository version **0.6.2** adds innate flight and map teleportation; the Steam Workshop update is pending. Ocean flight and map teleportation have been tested in-game, while caves and multiplayer still need further verification. Flight starts enabled, toggles with **V** (or B), and supports oceans and internal cave gaps while keeping ordinary obstacle collisions. Land on safe ground or a boat before disabling it. **Ctrl + right-click the map** closes the map and teleports after gameplay resumes, within the current world shard and without distance or material costs. Success shows “Teleported to the selected location.” Unsafe, occupied and restricted destinations are rejected with a reason. Dismount before toggling flight or teleporting. Hover and movement animations use the supplied artwork. Flight loops show an empty-handed pose without held items or hats; attacks, harvesting and heat vision restore the normal character animations. Equipped items retain their effects.

@@ -124,6 +124,10 @@ TheNet.paused = false
 -- A point near the player sets direction, not beam length. A far point cannot
 -- extend the 20-unit beam. Broad-phase results deliberately include allies.
 local caster = player()
+caster.SuspendKryptonFlightVisual = function(self, duration)
+    self.flight_suspensions = (self.flight_suspensions or 0) + 1
+    self.flight_suspend_duration = duration
+end
 local center, edge, end_point = entity(5, 0), entity(12, 0.8), entity(20, 0)
 local behind, wide, distant = entity(-0.01, 0), entity(5, 0.801), entity(20.81, 0)
 behind.radius = 1
@@ -146,6 +150,8 @@ query_targets = { center, edge, end_point, large, end_overlap, beyond_cap, behin
     untargetable, follower, immunity, killed, removed, nonburnable, caster }
 for _, victim in ipairs(protected) do table.insert(query_targets, victim) end
 equal(HeatVision.Cast(caster, 1, 0), true, "cast requires no equipment, hunger or sanity")
+equal(caster.flight_suspensions, 1, "server cast restores native head-bearing flight pose once")
+equal(caster.flight_suspend_duration, .5, "server flight pose pause covers beam lifetime")
 for _, victim in ipairs({ center, edge, end_point, large, end_overlap, immunity, killed, removed, nonburnable }) do
     equal(victim.components.combat.hits, 1, "beam target hit exactly once")
     equal(victim.components.combat.damage, 2000, "configured damage")
@@ -172,6 +178,7 @@ close(caster._krypton_heatvision_nextcast, 10.35, "server interval")
 local queries_after_cast = query_count
 now = 10.349
 equal(HeatVision.Cast(caster, 1000, 0), false, "rapid RPC repetition blocked")
+equal(caster.flight_suspensions, 1, "refused repeated cast does not prolong visual suspension")
 equal(query_count, queries_after_cast, "repeated RPC performs no query")
 query_targets = { distant }
 now = 10.35
@@ -395,10 +402,16 @@ Visual.Update(client_fx)
 equal(#entities, initial_entities, "unresolved replicated caster creates no orphan visuals")
 
 local actor = visual_caster()
+actor.SuspendKryptonFlightVisual = function(self, duration)
+    self.flight_suspensions = (self.flight_suspensions or 0) + 1
+    self.flight_suspend_duration = duration
+end
 client_fx._caster:set(actor)
 client_fx._angle:set(37)
 client_fx.components.updatelooper.update(client_fx)
 equal(client_fx._eye_pose, "front", "front-facing eye layout")
+equal(actor.flight_suspensions, 1, "observer restores caster native head-bearing pose once per shared cast")
+equal(actor.flight_suspend_duration, .5, "observer pauses flight artwork through beam lifetime")
 equal(#client_fx._eyes, 2, "front has two separate eye origins")
 close(actor.symbol_calls[1][2], -25.95152, "left eye is authored head pixel")
 close(actor.symbol_calls[2][2], 20.54304, "right eye is authored head pixel")
@@ -517,6 +530,7 @@ equal(client_fx._eyes, nil, "invalid caster does not create visuals")
 actor.valid = true
 Visual.Update(client_fx)
 local last_eyes = client_fx._eyes
+equal(actor.flight_suspensions, 1, "animation, facing and sleep updates do not repeatedly extend pose suspension")
 client_fx:Remove()
 equal(client_fx._eyes, nil, "network removal cleans up all local eyes")
 for _, eye in ipairs(last_eyes) do assert(eye.halo.removed and eye.core.removed and eye.spark.removed) end

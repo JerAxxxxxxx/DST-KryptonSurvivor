@@ -77,6 +77,44 @@ def read_anim(data):
     return animations, names
 
 
+def hash_name(name):
+    """Klei's case-insensitive SDBM symbol/bank hash."""
+    value = 0
+    for character in name.lower():
+        value = (ord(character) + (value << 6) + (value << 16) - value) & 0xffffffff
+    return value
+
+
+def write_anim(animations, names):
+    """Serialize original ANIM v4 frames; never reads or copies game motions."""
+    frame_count = sum(len(animation['frames']) for animation in animations)
+    element_count = sum(len(frame['elements']) for animation in animations for frame in animation['frames'])
+    event_count = sum(len(frame.get('events', [])) for animation in animations for frame in animation['frames'])
+    result = bytearray(struct.pack('<4s5I', b'ANIM', 4, element_count, frame_count, event_count, len(animations)))
+    def string(value):
+        encoded = value.encode('utf8')
+        return struct.pack('<I', len(encoded)) + encoded
+    for animation in animations:
+        result += string(animation['name'])
+        result += struct.pack('<BIfI', animation['facing'], animation['root'], animation['rate'], len(animation['frames']))
+        for frame in animation['frames']:
+            result += struct.pack('<4f', *frame['bbox'])
+            events = frame.get('events', [])
+            result += struct.pack('<I', len(events))
+            for event in events:
+                result += struct.pack('<I', event)
+            result += struct.pack('<I', len(frame['elements']))
+            for element in frame['elements']:
+                result += struct.pack('<3I7f', *element)
+    result += struct.pack('<I', len(names))
+    for hashed, name in sorted(names.items()):
+        assert hash_name(name) == hashed
+        result += struct.pack('<I', hashed) + string(name)
+    parsed, parsed_names = read_anim(result)
+    assert len(parsed) == len(animations) and parsed_names == names
+    return bytes(result)
+
+
 def write_tex(image):
     """KTEX RGBA, full mip chain, premultiplied alpha, bottom-up texels."""
     mips = []

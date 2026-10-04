@@ -3,7 +3,8 @@
   "sources": {
     "motion": {"path":"assets/source/superman-motion.jpg","tolerance":22},
     "standing": {"path":"assets/source/superman-standing.jpg","tolerance":27},
-    "weapon": {"path":"assets/source/raos-edge.png","tolerance":45}
+    "weapon": {"path":"assets/source/raos-edge.png","tolerance":45},
+    "flight": {"path":"assets/source/superman-flight.jpg","tolerance":30}
   },
   "workshop_preview": {
     "source": "standing",
@@ -33,7 +34,29 @@
       "glow_width": 0.5, "core_width": 0.16, "eye_glow_scale": 0.18
     }
   },
+  "flight": {
+    "build": "krypton_flight_build",
+    "symbol": "krypton_flight_body",
+    "bank": "wilson",
+    "frames_per_second": 12,
+    "loop_frames": 12,
+    "bob_pixels": 3,
+    "poses": [
+      {"selection":"flight-idle-front","frame":0,"direction":"front","facing":8,"animation":"krypton_flight_idle","anchor":[96,237],"local_anchor":[0,-28],"scale":1.6},
+      {"selection":"flight-idle-side","frame":1,"direction":"side","facing":5,"animation":"krypton_flight_idle","anchor":[268,238],"local_anchor":[0,-28],"scale":1.6},
+      {"selection":"flight-idle-back","frame":2,"direction":"back","facing":2,"animation":"krypton_flight_idle","anchor":[435,253],"local_anchor":[0,-28],"scale":1.6},
+      {"selection":"flight-move-front","frame":3,"direction":"front","facing":8,"animation":"krypton_flight_move","anchor":[625,252],"local_anchor":[0,-28],"scale":1.6},
+      {"selection":"flight-move-side","frame":4,"direction":"side","facing":5,"animation":"krypton_flight_move","anchor":[907,159],"local_anchor":[0,-80],"scale":1.9},
+      {"selection":"flight-move-back","frame":5,"direction":"back","facing":2,"animation":"krypton_flight_move","anchor":[942,331],"local_anchor":[0,-28],"scale":1.6}
+    ]
+  },
   "selections": {
+    "flight-idle-front":{"source":"flight","polygon":[[36,10],[163,10],[163,242],[36,242]]},
+    "flight-idle-side":{"source":"flight","polygon":[[209,10],[323,10],[323,242],[209,242]]},
+    "flight-idle-back":{"source":"flight","polygon":[[362,10],[510,10],[510,259],[362,259]]},
+    "flight-move-front":{"source":"flight","polygon":[[540,10],[710,10],[710,259],[540,259]]},
+    "flight-move-side":{"source":"flight","polygon":[[758,6],[1007,6],[1007,163],[758,163]]},
+    "flight-move-back":{"source":"flight","polygon":[[883,133],[1023,133],[1023,334],[774,334],[774,175],[883,175]]},
     "head-front":{"source":"motion","polygon":[[98,40],[245,40],[245,175],[225,202],[204,218],[185,228],[171,228],[147,216],[127,193],[109,171],[98,146]]},
     "head-side":{"source":"motion","polygon":[[445,40],[595,40],[597,151],[585,175],[581,216],[563,230],[545,230],[520,216],[491,188],[460,163],[445,130]]},
     "head-back":{"source":"motion","polygon":[[770,40],[938,40],[940,175],[921,201],[898,218],[878,221],[851,215],[818,209],[796,191],[779,158]]},

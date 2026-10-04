@@ -49,6 +49,9 @@ function HeatVision.Cast(player, aim_x, aim_z)
     local range, width = tuning.heatvision_range, tuning.heatvision_width
     local mid_x, mid_z = x + dx * range / 2, z + dz * range / 2
     player:ForceFacePoint(x + dx * range, y, z + dz * range)
+    -- Flight uses whole-pose artwork. Restore the animated head for a cast so
+    -- the existing calibrated eye symbols remain the source of the beam.
+    if player.SuspendKryptonFlightVisual ~= nil then player:SuspendKryptonFlightVisual(0.5) end
 
     -- Clients resolve their own animated eye positions from this shared cast.
     local fx = SpawnPrefab("krypton_heatvision_fx")

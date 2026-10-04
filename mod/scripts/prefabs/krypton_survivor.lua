@@ -1,6 +1,8 @@
 local MakePlayerCharacter = require("prefabs/player_common")
+local Flight = require("krypton_flight")
 local assets = {
     Asset("ANIM", "anim/krypton_survivor.zip"),
+    Asset("ANIM", "anim/krypton_flight.zip"),
     Asset("ANIM", "anim/ghost_wilson_build.zip"),
 }
 local prefabs = { "krypton_staff", "krypton_heatvision_fx" }
@@ -9,6 +11,7 @@ local function common_postinit(inst)
     inst:AddTag("kryptonian")
     inst.MiniMapEntity:SetIcon("avatar_krypton_survivor.tex")
     inst.AnimState:SetBuild("krypton_survivor")
+    Flight.CommonInit(inst)
     local function EnableNightVision(player)
         if player.components.playervision ~= nil then
             -- Preserve normal daylight warmth; brighten darkness without the
@@ -38,6 +41,7 @@ end
 
 local function master_postinit(inst)
     local tuning = TUNING.KRYPTON_SURVIVOR
+    Flight.MasterInit(inst)
     inst.soundsname = "wilson"
     inst.ghostbuild = "ghost_wilson_build"
     inst.starting_inventory = { "krypton_staff" }
@@ -68,10 +72,7 @@ local function master_postinit(inst)
         end
     end)
 
-    -- This hook is called again after resurrection by the base game.
-    inst.ExtraConfigurePlayerLocomotor = function(player)
-        player.components.locomotor:SetExternalSpeedMultiplier(player, "krypton_survivor", tuning.speed)
-    end
+    -- The shared hook also configures remote-client movement prediction.
     inst.ExtraConfigurePlayerLocomotor(inst)
 
     inst.OnNewSpawn = function(player)

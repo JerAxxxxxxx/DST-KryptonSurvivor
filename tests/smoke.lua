@@ -20,25 +20,32 @@ STRINGS = {
 TUNING = {}
 LanguageTranslator = { defaultlang = "zh" }
 GLOBAL = { STRINGS = STRINGS, TUNING = TUNING, LanguageTranslator = LanguageTranslator, deepcopy = deepcopy,
-    KEY_R = 114, TheNet = { IsDedicated = function() return true end } }
+    KEY_R = 114, KEY_V = 118, TheNet = { IsDedicated = function() return true end } }
 package.preload["krypton_heatvision"] = function() return load_source("mod/scripts/krypton_heatvision.lua") end
 package.preload["krypton_heatvision_input"] = function() return load_source("mod/scripts/krypton_heatvision_input.lua") end
-local heatvision_rpc
+package.preload["krypton_flight_visual"] = function() return load_source("mod/scripts/krypton_flight_visual.lua") end
+package.preload["krypton_flight"] = function() return load_source("mod/scripts/krypton_flight.lua") end
+package.preload["krypton_flight_input"] = function() return load_source("mod/scripts/krypton_flight_input.lua") end
+package.preload["krypton_map_teleport"] = function() return load_source("mod/scripts/krypton_map_teleport.lua") end
+package.preload["krypton_map_teleport_input"] = function() return load_source("mod/scripts/krypton_map_teleport_input.lua") end
+package.preload["componentutil"] = function() return {} end
+local ability_rpcs = {}
 AddModRPCHandler = function(namespace, name, fn)
-    assert(namespace == "KryptonSurvivor" and name == "HeatVision")
-    heatvision_rpc = fn
+    assert(namespace == "KryptonSurvivor" and (name == "HeatVision" or name == "ToggleFlight" or name == "MapTeleport"))
+    ability_rpcs[name] = fn
 end
 local config = {}
 GetModConfigData = function(name) return config[name] end
-local added_character, puppet_hook
+local added_character, puppet_hook, map_hook
 AddModCharacter = function(name, gender, modes)
     assert(gender == "MALE" and modes == nil)
     added_character = name
 end
 AddMinimapAtlas = function() end
 AddClassPostConstruct = function(path, callback)
-    assert(path == "widgets/skinspuppet")
-    puppet_hook = callback
+    if path == "widgets/skinspuppet" then puppet_hook = callback
+    elseif path == "screens/mapscreen" then map_hook = callback
+    else error("unexpected UI hook: " .. path) end
 end
 load_source("mod/modmain.lua")
 assert(added_character == "krypton_survivor")
@@ -46,7 +53,10 @@ assert(STRINGS.NAMES.KRYPTON_SURVIVOR == "超人")
 assert(STRINGS.NAMES.KRYPTON_STAFF == "拉奥之锋")
 assert(STRINGS.CHARACTER_TITLES.krypton_survivor == "超人 · 氪星幸存者")
 assert(STRINGS.CHARACTERS.KRYPTON_SURVIVOR ~= STRINGS.CHARACTERS.GENERIC)
-assert(type(heatvision_rpc) == "function" and TUNING.KRYPTON_SURVIVOR.heatvision_damage == 2000)
+assert(type(ability_rpcs.HeatVision) == "function" and TUNING.KRYPTON_SURVIVOR.heatvision_damage == 2000)
+assert(type(ability_rpcs.ToggleFlight) == "function" and type(ability_rpcs.MapTeleport) == "function")
+assert(type(map_hook) == "function" and TUNING.KRYPTON_SURVIVOR.flight_enabled == true)
+assert(TUNING.KRYPTON_SURVIVOR.map_teleport_enabled == true)
 config.language = "en"
 config.staff_damage = 10000
 config.speed_multiplier = 2
@@ -64,7 +74,17 @@ assert(preview.prefab == "krypton_survivor" and preview.base == nil)
 preview:SetSkins("wendy", "wendy_none")
 assert(preview.prefab == "wendy" and preview.base == "wendy_none")
 
-TheWorld = { state = { isday = true }, cave = false,
+FRAMES, TILE_SCALE = 1 / 30, 4
+GetTime = function() return 10 end
+COLLISION = { LAND_OCEAN_LIMITS = 2, BOAT_LIMITS = 4 }
+net_bool = function()
+    return { state = false, value = function(self) return self.state end,
+        set = function(self, value) self.state = value end }
+end
+TheWorld = { ismastersim = true, state = { isday = true }, cave = false,
+    Map = { IsInMapBounds = function() return true end,
+        GetSize = function() return 100, 100 end,
+        GetTileCoordsAtPoint = function() return 50, 50 end },
     HasTag = function(self, tag) return tag == "cave" and self.cave end }
 local common, master
 package.preload["prefabs/player_common"] = function()
@@ -76,15 +96,25 @@ package.preload["prefabs/player_common"] = function()
 end
 load_source("mod/scripts/prefabs/krypton_survivor.lua")
 local player = {
-    tags = { player = true },
-    components = {},
+    GUID = 1, tags = { player = true },
+    components = {}, replica = {},
     MiniMapEntity = { SetIcon = function(self, value) self.icon = value end },
-    AnimState = { SetBuild = function(self, value) self.build = value end },
+    AnimState = { SetBuild = function(self, value) self.build = value end,
+        AddOverrideBuild = function(self, value) self.override_build = value end,
+        IsCurrentAnimation = function() return false end },
     AddTag = function(self, tag) self.tags[tag] = true end,
+    RemoveTag = function(self, tag) self.tags[tag] = nil end,
     DoTaskInTime = function(self, delay, fn) self.visiontask = fn end,
     DoPeriodicTask = function(self, period, fn) self.regentask = fn end,
     ListenForEvent = function(self, event, fn) self.activation = fn end,
     HasTag = function(self, tag) return self.tags[tag] == true end,
+    Transform = { GetWorldPosition = function() return 0, 0, 0 end },
+    GetCurrentPlatform = function() return nil end,
+    Physics = { mask = 31,
+        IsActive = function() return true end,
+        GetCollisionMask = function(self) return self.mask end,
+        ClearCollidesWith = function(self, flag) self.mask = self.mask - flag end,
+        CollidesWith = function(self, flag) self.mask = self.mask + flag end },
 }
 for _, name in ipairs({ "health", "hunger", "sanity" }) do
     player.components[name] = {
@@ -109,7 +139,16 @@ player.components.health.DoDelta = function(self, delta, overtime, cause)
 end
 player.components.sanity.DoDelta = function(self, delta) self.delta = delta end
 player.components.skinner = { SetSkinMode = function(self, mode) self.mode = mode end }
-player.components.locomotor = { SetExternalSpeedMultiplier = function(self, owner, key, value) self.mult = value end }
+player.components.locomotor = {
+    pathcaps = { allowocean = false }, directdrive = false,
+    enablegroundspeedmultiplier = true, triggerscreep = true, allow_platform_hopping = true,
+    ResetPath = function() end,
+    EnableGroundSpeedMultiplier = function(self, value) self.enablegroundspeedmultiplier = value end,
+    SetTriggersCreep = function(self, value) self.triggerscreep = value end,
+    SetAllowPlatformHopping = function(self, value) self.allow_platform_hopping = value end,
+    SetExternalSpeedMultiplier = function(self, owner, key, value) self.mult = value end,
+}
+player.components.drownable = { enabled = true }
 local starter = { prefab = "krypton_staff" }
 player.components.inventory = {
     FindItem = function(self, test) return test(starter) and starter or nil end,
@@ -120,6 +159,9 @@ assert(player.tags.kryptonian and player.AnimState.build == "krypton_survivor")
 player.visiontask(player)
 assert(player.components.playervision.forced)
 master(player)
+assert(player._krypton_flying:value() and player.tags.flying and player.Physics.mask == 25)
+assert(player.components.locomotor.directdrive and player.components.locomotor.pathcaps.allowocean)
+assert(player.components.drownable.enabled == false)
 player.components.health.hurt = true
 player.regentask(player)
 assert(player.components.sanity.delta == 100)

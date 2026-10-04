@@ -93,6 +93,10 @@ function Visual.Update(inst)
         Visual.Clear(inst)
         return
     end
+    if inst._flight_pose_caster ~= caster then
+        inst._flight_pose_caster = caster
+        if caster.SuspendKryptonFlightVisual ~= nil then caster:SuspendKryptonFlightVisual(0.5) end
+    end
     local pose = GetPose(caster)
     local layout = Data[pose]
     local positions = {}

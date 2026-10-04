@@ -2,7 +2,7 @@
 from pathlib import Path
 import hashlib,json,struct,zipfile
 import xml.etree.ElementTree as ET
-from klei_assets import read_build,read_tex,crop_symbol
+from klei_assets import read_anim,read_build,read_tex,crop_symbol,hash_name
 from paths import ROOT,MOD
 
 def check_texture(data):
@@ -33,6 +33,36 @@ for archive,name,count in [('krypton_survivor.zip','krypton_survivor',132),
                 assert all(0<=v[3]<=1 and 0<=v[4]<=1 and v[5]==0 for v in verts)
                 crop_symbol(build,texture,symbol,row[0])
                 total+=1
+spec=json.loads((ROOT/'assets/slices.json').read_text(encoding='utf8'))
+flight=spec['flight']
+with zipfile.ZipFile(MOD/'anim/krypton_flight.zip') as z:
+    assert set(z.namelist())=={'build.bin','atlas-0.tex','anim.bin'},'Flight archive must contain only its own build and animation'
+    build=read_build(z.read('build.bin'));texture=check_texture(z.read('atlas-0.tex'))
+    assert build['name']==flight['build'] and len(build['symbols'])==1
+    symbol=build['symbols'][0]
+    assert symbol['name']==flight['symbol'] and symbol['hash']==hash_name(flight['symbol'])
+    assert [row[0] for row in symbol['frames']]==list(range(6))
+    for row in symbol['frames']:
+        verts=build['verts'][row[6]:row[6]+row[7]]
+        assert row[4]>0 and row[5]>0 and len(verts)==6
+        assert all(0<=v[3]<=1 and 0<=v[4]<=1 and v[5]==0 for v in verts)
+        assert crop_symbol(build,texture,symbol,row[0]).getbbox(),'Missing supplied flight pose'
+        total+=1
+    animation_data=z.read('anim.bin')
+    magic,version,elements,frames,events,count=struct.unpack_from('<4s5I',animation_data)
+    assert (magic,version,elements,frames,events,count)==(b'ANIM',4,72,72,0,6)
+    animations,names=read_anim(animation_data)
+    assert names=={hash_name(flight['bank']):flight['bank'],hash_name(flight['symbol']):flight['symbol']}
+    for animation,pose in zip(animations,flight['poses']):
+        assert (animation['name'],animation['facing'],animation['root'],animation['rate'])==(
+            pose['animation'],pose['facing'],hash_name(flight['bank']),flight['frames_per_second'])
+        assert len(animation['frames'])==flight['loop_frames']
+        for frame in animation['frames']:
+            assert not frame['events'] and len(frame['elements'])==1
+            element=frame['elements'][0]
+            assert element[:3]==(symbol['hash'],pose['frame'],symbol['hash'])
+            assert element[3:8]==(1,0,0,1,0),'Flight animation only translates existing pixels'
+            assert abs(element[8])<=flight['bob_pixels']+.001 and element[9]==0
 for p in MOD.rglob('*.tex'):check_texture(p.read_bytes())
 for p in MOD.rglob('*.xml'):
     atlas=ET.fromstring(p.read_text(encoding='utf8'))
@@ -41,8 +71,8 @@ for p in MOD.rglob('*.xml'):
     for element in atlas.findall('./Elements/Element'):
         assert 0<=float(element.attrib['u1'])<float(element.attrib['u2'])<=1
         assert 0<=float(element.attrib['v1'])<float(element.attrib['v2'])<=1
-manifest_path=ROOT/'build/extraction-manifest.json'
-if manifest_path.exists():
-    for item in json.loads(manifest_path.read_text(encoding='utf8'))['sources'].values():
-        assert hashlib.sha256((ROOT/item['path']).read_bytes()).hexdigest()==item['sha256']
+for manifest_path in [ROOT/'build/extraction-manifest.json',ROOT/'build/flight-extraction-manifest.json']:
+    if manifest_path.exists():
+        for item in json.loads(manifest_path.read_text(encoding='utf8'))['sources'].values():
+            assert hashlib.sha256((ROOT/item['path']).read_bytes()).hexdigest()==item['sha256']
 print(f'Validated {total} symbol frames, full texture mip chains, UI atlases and available source hashes.')
