@@ -20,8 +20,31 @@ net_bool = function()
     return { stored = false, value = function(self) return self.stored end,
         set = function(self, value) self.stored = value end }
 end
-local now, world, occupancy, teleport_permitted
+local now, world, occupancy, teleport_permitted, sound_entities
 GetTime = function() return now end
+CreateEntity = function()
+    local sound = { valid = true, tags = {}, entity = {}, plays = 0 }
+    sound.AddTag = function(self, tag) self.tags[tag] = true end
+    sound.IsValid = function(self) return self.valid end
+    sound.Hide = function(self) self.hidden = true end
+    sound.Remove = function(self) self.valid = false; self.removed = true end
+    sound.entity.SetCanSleep = function(self, value) self.can_sleep = value end
+    sound.entity.AddTransform = function() sound.Transform = {} end
+    sound.entity.SetParent = function(self, parent) self.parent = parent end
+    sound.entity.AddSoundEmitter = function()
+        sound.SoundEmitter = {
+            PlaySound = function(self, path, handle, volume)
+                sound.path, sound.handle, sound.volume = path, handle, volume
+                sound.plays = sound.plays + 1
+            end,
+            KillSound = function(self, handle) sound.killed = handle end,
+        }
+    end
+    -- No AddNetwork method: playback must use a local child, not a second
+    -- replicated emitter that would play over the host's native sound event.
+    table.insert(sound_entities, sound)
+    return sound
+end
 IsTeleportingPermittedFromPointToPoint = function(sx, sy, sz, x, y, z) return teleport_permitted end
 package.preload["componentutil"] = function() return {} end
 package.preload["krypton_flight_visual"] = function() return load_source("mod/scripts/krypton_flight_visual.lua") end
@@ -29,10 +52,12 @@ package.preload["krypton_flight"] = function() return load_source("mod/scripts/k
 local Flight = require("krypton_flight")
 
 local function reset_world()
-    now, occupancy, teleport_permitted, ThePlayer = 10, {}, true, nil
+    now, occupancy, teleport_permitted, ThePlayer, sound_entities = 10, {}, true, nil, {}
     TUNING = { KRYPTON_SURVIVOR = { speed = 2, flight_enabled = true,
         flight_toggle_interval = .35, map_teleport_enabled = true, map_teleport_interval = .5 } }
-    TheNet = { paused = false, IsServerPaused = function(self) return self.paused end }
+    TheNet = { paused = false, dedicated = false,
+        IsServerPaused = function(self) return self.paused end,
+        IsDedicated = function(self) return self.dedicated end }
     world = { ismastersim = true, ground = true, terrain = "land", blocked = false,
         path_clear = true, destination_platform = nil }
     world.Map = {
@@ -73,9 +98,10 @@ local function player()
     next_guid = next_guid + 1
     local inst = { GUID = next_guid, prefab = "krypton_survivor", valid = true,
         tags = { player = true, kryptonian = true }, components = {}, events = {}, tasks = {},
-        x = 5, y = 0, z = 6, radius = .5, log = {} }
+        x = 5, y = 0, z = 6, radius = .5, log = {}, entity = {}, asleep = false }
     local function record(event) table.insert(inst.log, event) end
     inst.IsValid = function(self) return self.valid end
+    inst.IsAsleep = function(self) return self.asleep end
     inst.HasTag = function(self, tag) return self.tags[tag] == true end
     inst.AddTag = function(self, tag) self.tags[tag] = true end
     inst.RemoveTag = function(self, tag) self.tags[tag] = nil end
@@ -455,6 +481,124 @@ equal(observer.AnimState.animation, "krypton_flight_idle", "replicated release r
 observer.AnimState.animation = "attack"
 apply(observer)
 equal(observer.AnimState.animation, "attack", "remote action animations are preserved without a stategraph")
+
+-- The native footstep override is per player. Air movement has one local wind
+-- child; normal actions keep their original SoundEmitter and override chain.
+reset_world()
+local audio_actor = player()
+local previous_steps, previous_volume, previous_predicted = 0
+local original_emitter = {}
+audio_actor.SoundEmitter = original_emitter
+audio_actor.footstepoverridefn = function(inst, volume, predicted)
+    previous_steps, previous_volume, previous_predicted = previous_steps + 1, volume, predicted
+    return false
+end
+audio_actor.AnimState.animation = "idle_loop"
+Flight.CommonInit(audio_actor)
+Flight.MasterInit(audio_actor)
+equal(audio_actor:footstepoverridefn(.6, true), true, "hovering does not play a ground step")
+equal(previous_steps, 0, "airborne step cannot play clothing overrides before suppression")
+equal(#sound_entities, 0, "hovering keeps the air loop quiet")
+for _, transition in ipairs({ { "run_start", "run_pre" }, { "run_start", "walk_pre" },
+    { "run_stop", "run_pst" }, { "run_stop", "walk_pst" } }) do
+    audio_actor.sg.currentstate.name, audio_actor.AnimState.animation = transition[1], transition[2]
+    equal(audio_actor:footstepoverridefn(1, true), true, "airborne movement transitions cannot leak first-step sounds")
+    apply(audio_actor)
+    equal(audio_actor.AnimState.animation, transition[2], "audio fix preserves native transition animation")
+    equal(#sound_entities, 0, "movement transition does not start a separate air loop")
+end
+audio_actor.sg.currentstate.name, audio_actor.AnimState.animation = "run", "run_loop"
+equal(audio_actor:footstepoverridefn(.6, true), true, "native run reentry cannot leak terrain footsteps")
+apply(audio_actor)
+local moving_sound = audio_actor._krypton_flight_sound
+assert(moving_sound ~= nil and moving_sound.hidden and not moving_sound.persists,
+    "moving flight starts a hidden unsaved local sound child")
+equal(moving_sound.entity.parent, audio_actor.entity, "air sound follows the player position")
+equal(moving_sound.entity.can_sleep, false, "wind child cannot suspend its loop independently")
+equal(moving_sound.path, "meta5/woby/sprint_wind_lp", "air sound uses an existing globally loaded event")
+equal(moving_sound.handle, "krypton_flight")
+close(moving_sound.volume, .15, "wind remains below normal full-volume movement")
+audio_actor.AnimState.animation = "run_loop"
+apply(audio_actor)
+equal(audio_actor._krypton_flight_sound, moving_sound, "native movement reentry reuses the same emitter")
+equal(moving_sound.plays, 1, "frame updates cannot stack or restart air loops")
+equal(#sound_entities, 1, "one flight emitter exists per rendered player")
+equal(audio_actor.SoundEmitter, original_emitter, "combat and eating emitter is never replaced or muted")
+equal(Flight.Toggle(audio_actor), true)
+assert(moving_sound.removed and moving_sound.killed == "krypton_flight", "landing kills and removes the wind child")
+equal(audio_actor._krypton_flight_sound, nil, "landing clears sound ownership")
+equal(audio_actor:footstepoverridefn(.4, true), false, "grounded steps fall through to terrain audio")
+equal(previous_steps, 1, "landing restores the existing skin/mod footstep override")
+close(previous_volume, .4, "previous override receives original volume")
+equal(previous_predicted, true, "previous override receives prediction flag")
+now = now + .4
+equal(Flight.Toggle(audio_actor), true)
+moving_sound = audio_actor._krypton_flight_sound
+audio_actor.components.rider.riding = true
+audio_actor.events.mounted(audio_actor)
+assert(moving_sound.removed, "mounting stops airborne audio")
+equal(audio_actor:footstepoverridefn(.8, false), false, "mounted native footsteps remain available")
+audio_actor.components.rider.riding = false
+audio_actor.events.dismounted(audio_actor)
+moving_sound = audio_actor._krypton_flight_sound
+audio_actor.sg.currentstate.name, audio_actor.AnimState.animation = "attack", "attack"
+audio_actor.sg.tags.busy = true
+apply(audio_actor)
+assert(moving_sound.removed, "an attack immediately stops the movement air loop")
+equal(audio_actor:footstepoverridefn(.5, false), false, "busy action footstep events use their original behavior")
+audio_actor.sg.tags.busy = nil
+audio_actor.sg.currentstate.name, audio_actor.AnimState.animation = "run", "run_loop"
+apply(audio_actor)
+moving_sound = audio_actor._krypton_flight_sound
+audio_actor:SuspendKryptonFlightVisual(.5)
+assert(moving_sound.removed, "heat-vision visual suspension also stops flight wind")
+equal(audio_actor:footstepoverridefn(.5, true), false, "suspended action sounds are preserved")
+now = now + .5
+audio_actor._krypton_flight_visual_resume_task.fn(audio_actor)
+moving_sound = audio_actor._krypton_flight_sound
+audio_actor.asleep = true
+audio_actor.events.entitysleep(audio_actor)
+assert(moving_sound.removed, "sleeping player removes its local sound child")
+apply(audio_actor)
+equal(audio_actor._krypton_flight_sound, nil, "periodic updates cannot recreate sound while asleep")
+audio_actor.asleep = false
+audio_actor.events.entitywake(audio_actor)
+moving_sound = audio_actor._krypton_flight_sound
+assert(moving_sound ~= nil, "waking restores moving flight audio")
+audio_actor.components.health.dead = true
+apply(audio_actor)
+assert(moving_sound.removed, "death stops the loop without touching native death sounds")
+audio_actor.components.health.dead = false
+apply(audio_actor)
+moving_sound = audio_actor._krypton_flight_sound
+audio_actor.events.onremove(audio_actor)
+audio_actor.events.onremove(audio_actor)
+assert(moving_sound.removed and audio_actor._krypton_flight_sound == nil,
+    "removal cleanup is idempotent and cannot leak wind")
+
+reset_world()
+TheNet.dedicated = true
+local silent_server = player()
+silent_server.sg.currentstate.name, silent_server.AnimState.animation = "run", "run_loop"
+Flight.CommonInit(silent_server)
+Flight.MasterInit(silent_server)
+equal(silent_server:footstepoverridefn(1, true), true, "dedicated server suppresses replicated terrain steps")
+equal(#sound_entities, 0, "dedicated server creates no presentation sound entities")
+
+reset_world()
+world.ismastersim = false
+local audio_observer = player()
+audio_observer.sg = nil
+audio_observer.AnimState.animation = "run_loop"
+Flight.CommonInit(audio_observer)
+audio_observer._krypton_flying:set(true)
+apply(audio_observer)
+moving_sound = audio_observer._krypton_flight_sound
+assert(moving_sound ~= nil, "other clients render one positional air loop for a moving player")
+audio_observer.AnimState.animation = "attack"
+apply(audio_observer)
+assert(moving_sound.removed, "remote actions stop sound even without a local stategraph")
+equal(audio_observer:footstepoverridefn(1, false), false, "remote action animations do not swallow native footstep events")
 
 -- Flight keyboard input follows focus/placement guards and never registers on
 -- a dedicated server. Actual state eligibility remains authoritative above.

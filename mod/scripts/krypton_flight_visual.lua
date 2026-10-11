@@ -4,10 +4,52 @@ local BUILD = "krypton_flight_build"
 local IDLE = "krypton_flight_idle"
 local MOVE = "krypton_flight_move"
 local LOOPS = { "idle_loop", "run_loop", "walk_loop" }
+-- This native air loop is globally loaded by prefabs/global.lua. Keep the
+-- emitter local, like Walter's sprint trail, so host and client playback cannot
+-- duplicate each other and no native sound files need to ship with the mod.
+local FLIGHT_SOUND = "meta5/woby/sprint_wind_lp"
+local FLIGHT_SOUND_VOLUME = .15
+
+local function StopFlightSound(inst)
+    local sound = inst._krypton_flight_sound
+    inst._krypton_flight_sound = nil
+    if sound ~= nil and sound:IsValid() then
+        sound.SoundEmitter:KillSound("krypton_flight")
+        sound:Remove()
+    end
+end
+
+local function UpdateFlightSound(inst, moving)
+    if not moving or TheNet:IsDedicated() or inst:IsAsleep() then
+        StopFlightSound(inst)
+        return
+    end
+    if inst._krypton_flight_sound == nil then
+        local sound = CreateEntity()
+        sound:AddTag("FX")
+        sound:AddTag("NOCLICK")
+        sound.entity:SetCanSleep(false)
+        sound.persists = false
+        sound.entity:AddTransform()
+        sound.entity:AddSoundEmitter()
+        sound.entity:SetParent(inst.entity)
+        sound:Hide()
+        sound.SoundEmitter:PlaySound(FLIGHT_SOUND, "krypton_flight", FLIGHT_SOUND_VOLUME)
+        inst._krypton_flight_sound = sound
+    end
+end
 
 local function CurrentFlightAnimation(inst)
     if inst.AnimState:IsCurrentAnimation(IDLE) then return IDLE end
     if inst.AnimState:IsCurrentAnimation(MOVE) then return MOVE end
+end
+
+local function IsFlightLoop(inst)
+    if CurrentFlightAnimation(inst) ~= nil then return true end
+    for _, animation in ipairs(LOOPS) do
+        if inst.AnimState:IsCurrentAnimation(animation) then return true end
+    end
+    return false
 end
 
 local function IsNormalState(inst)
@@ -22,6 +64,22 @@ local function IsNormalState(inst)
     return true
 end
 
+local function IsFlightStep(inst)
+    if IsNormalState(inst) then return IsFlightLoop(inst) end
+    local state = inst.sg ~= nil and inst.sg.currentstate or nil
+    if inst:HasTag("busy") or state == nil or inst.sg:HasStateTag("busy")
+        or (state.name ~= "run_start" and state.name ~= "run_stop") then
+        return false
+    end
+    -- Both Wilson SGs emit a terrain step during run_start. We preserve these
+    -- native transition animations, but an airborne player still has no floor
+    -- contact. Landing and mounted transitions fall through via IsFlying.
+    return inst.AnimState:IsCurrentAnimation("run_pre")
+        or inst.AnimState:IsCurrentAnimation("run_pst")
+        or inst.AnimState:IsCurrentAnimation("walk_pre")
+        or inst.AnimState:IsCurrentAnimation("walk_pst")
+end
+
 local function IsSuspended(inst)
     return (inst._krypton_flight_visual_suspended ~= nil and inst._krypton_flight_visual_suspended:value())
         or GetTime() < (inst._krypton_flight_visual_pauseuntil or 0)
@@ -31,6 +89,7 @@ function Visual.Apply(inst)
     if inst._krypton_flight_visual_isflying == nil then return end
     local current = CurrentFlightAnimation(inst)
     if not inst._krypton_flight_visual_isflying(inst) or IsSuspended(inst) or not IsNormalState(inst) then
+        StopFlightSound(inst)
         if current ~= nil then
             -- Only replace our own animation. A stategraph attack, gathering
             -- action, ghost or mounted animation always takes precedence.
@@ -52,6 +111,7 @@ function Visual.Apply(inst)
     end
     local desired = native ~= nil and (native == "idle_loop" and IDLE or MOVE) or current
     if desired == nil then
+        StopFlightSound(inst)
         -- Preserve run_pre/run_pst, funny idles and all complex actions.
         inst._krypton_flight_visual_animation = nil
         inst._krypton_flight_visual_started = nil
@@ -75,6 +135,7 @@ function Visual.Apply(inst)
             inst.AnimState:SetTime((now - inst._krypton_flight_visual_started) % length)
         end
     end
+    UpdateFlightSound(inst, desired == MOVE)
 end
 
 function Visual.CommonInit(inst, is_flying)
@@ -86,6 +147,20 @@ function Visual.CommonInit(inst, is_flying)
     -- and the existing character build remain available for native actions.
     inst.AnimState:AddOverrideBuild(BUILD)
     inst:ListenForEvent("krypton_flight_visualdirty", Visual.Apply)
+    inst:ListenForEvent("entitysleep", StopFlightSound)
+    inst:ListenForEvent("entitywake", Visual.Apply)
+    inst:ListenForEvent("onremove", StopFlightSound)
+    -- Native PlayFootstep supports this per-player hook in both Wilson SGs.
+    -- Preserve skin/mod overrides whenever landing, mounted or doing an action;
+    -- don't mute the SoundEmitter, which also plays combat and eating sounds.
+    local previous_footstep = inst.footstepoverridefn
+    inst.footstepoverridefn = function(player, volume, ispredicted)
+        if player._krypton_flight_visual_isflying(player)
+            and not IsSuspended(player) and IsFlightStep(player) then
+            return true
+        end
+        return previous_footstep ~= nil and previous_footstep(player, volume, ispredicted) or false
+    end
 end
 
 function Visual.Suspend(inst, duration)

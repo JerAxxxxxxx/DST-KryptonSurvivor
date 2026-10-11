@@ -1,7 +1,7 @@
 name = "Krypton Survivor · 氪星幸存者"
-description = "超人测试版 / Superman prototype\n飞行（默认 V）、Ctrl＋地图右键瞬移、热视线（R）、拉奥之锋、完整夜视和白天恢复。\nFlight (V), Ctrl + map right-click teleport, heat vision (R), Rao's Edge, night vision and daytime recovery."
+description = "超人测试版 / Superman prototype\n飞行（默认 V）、Ctrl＋地图右键瞬移、热视线（R）、拉奥之锋、星核护符、完整夜视和白天恢复。\nFlight (V), Ctrl + map right-click teleport, heat vision (R), Rao's Edge, Starcore Amulet, night vision and daytime recovery."
 author = "Krypton Survivor Project"
-version = "0.6.2"
+version = "0.7.2"
 api_version = 10
 dst_compatible = true
 dont_starve_compatible = false

@@ -29,6 +29,8 @@ python -m pip install -r requirements.txt
 python tools/extract_user_art.py
 python tools/build_custom_assets.py --game-dir "你的饥荒联机版安装目录"
 python tools/build_flight_assets.py
+python tools/build_eating_assets.py --game-dir "你的饥荒联机版安装目录"
+python tools/build_starcore_assets.py --game-dir "你的饥荒联机版安装目录"
 python tools/preview_animation.py --game-dir "你的饥荒联机版安装目录"
 python tools/check_assets.py
 npm run check
@@ -58,6 +60,36 @@ python tools/check_assets.py
 
 透明原始选区、缩放切片与来源哈希保存在 `build/art/flight/` 和 `build/flight-extraction-manifest.json`。预览从生成的编译包重新解码，输出 `build/previews/flight-poses.png`、`flight-contact-sheet.png`、`flight-loop.gif` 及各方向 GIF。检查六个姿态完整、没有混入相邻姿态或背景残片，并在游戏中确认镜像、动作切换、装备与帽子的表现。
 
+## 吃东西的表情
+
+`assets/source/superman-eat.jpg` 是用户提供的 `eat.jpg` 原样副本。三个正面头部的选区、缩放、锚点与切换时间线保存在 `assets/slices.json` 的 `eating` 段。
+
+```powershell
+python tools/build_eating_assets.py --game-dir "你的饥荒联机版安装目录"
+python tools/check_assets.py
+npm run check
+```
+
+此工具去除原图中的棋盘格背景并提取已有像素，生成只含自有 BILD 与贴图的 `mod/anim/krypton_eating.zip`，以及运行时使用的 `krypton_eating_visual_data.lua`。不打包原版吃饭动画，运行时沿用游戏的身体、手部、食物与声音。
+
+`build/art/eating/` 保存透明切片，`build/eating-extraction-manifest.json` 保存来源与位置。`build/previews/eating-heads.png` 对照常态头与三个表情；`eat-supplied.gif`、`quick_eat-supplied.gif`、`quick_drink-supplied.gif` 及同名 contact PNG 从编译包解码头部，并在内存中合成本机 `player_actions_eat.zip` 的身体动作。预览不代表食物显示、帽子或联机已完成实测。
+
+头部替换只在吃东西期间生效，结束或中断后恢复。脚本检查覆盖帧边界、前摇与客户端等待动画、动作打断、死亡、骑乘、皮肤和其他覆盖的恢复。BILD 符号表必须按无符号 SDBM 哈希升序排列；编译器统一排序，资源检查验证写入后的实际顺序，避免预览正常但游戏找不到头部。帽子、食物显示、连续吃东西与朋友客户端的实际表现仍需游戏验证。
+
+## 星核护符
+
+`tools/build_starcore_assets.py` 按 `assets/slices.json` 中的 `starcore` 与 `starcore-core` 从既有拉奥之锋透明原图提取发光核，生成 `mod/anim/krypton_starcore_build.zip` 和物品图集。该包只有自有 BILD 与贴图，使用 `redamulet` 符号；原版 `amulets.zip` 的动作在运行时加载。
+
+```powershell
+python tools/build_starcore_assets.py --game-dir "你的饥荒联机版安装目录"
+python tools/check_assets.py
+npm run check
+```
+
+`build/starcore-extraction-manifest.json` 记录来源、选区和位置。`build/previews/starcore-compiled-contact.png` 对照编译地面切片和物品图标，`starcore-ground-native.gif` 使用本机原版护符动作矩阵合成编译像素；原版动画只用于本地预览，不复制到安装包。
+
+`tests/starcore.lua` 覆盖原生装备事件顺序、干燥来源与冷热伤害过滤的撤销、自动复活成功与外部机制竞争、人物冷却／存档／分片，以及旧存档一次补发和身体栏兼容。实际游戏的装备、死亡与复活过程仍需试玩。
+
 ## 热视线眼部定位
 
 瞳孔来源点和光束边界保存在 `assets/slices.json` 的 `heatvision` 中。`tools/build_custom_assets.py` 根据头部锚点与缩放生成 `mod/scripts/krypton_heatvision_visual_data.lua`；修改源坐标后重新构建，不直接编辑生成文件。正面两处瞳孔、侧面一处；背面继承正面双束位置，不生成眼部发光。
@@ -72,9 +104,15 @@ python tools/preview_heatvision.py --game-dir "你的饥荒联机版安装目录
 
 ## 检查
 
-修改 Lua 后运行 `npm run check`。检查覆盖 Lua 5.1 语法、资源引用、语言、选人模型、角色属性、装备、联机分支、采集、所有权、范围伤害、夜视与热视线，以及飞行碰撞、存档、预测、视觉和地图瞬移的落点、权限、暂停恢复与输入焦点。GitHub Actions 在推送和拉取请求时执行同一套检查，无需安装游戏。
+修改 Lua 后运行 `npm run check`。检查覆盖 Lua 5.1 语法、资源引用、语言、选人模型、角色属性、装备、联机分支、采集、所有权、范围伤害、夜视与热视线，以及飞行碰撞、存档、预测、视觉和地图瞬移的落点、权限、暂停恢复与输入焦点。工具操作回归覆盖原生工作优先于采集的情形、连续空格采集、已采完植物保护、服务器指定目标验证、右键挖掘及原有工具动作。GitHub Actions 在推送和拉取请求时执行同一套检查，无需安装游戏。
 
-重建图片后运行 `python tools/check_assets.py`，核对编译帧、贴图 mip 层、图集引用与可用的原图哈希，并检查生成的动作预览。
+星核护符检查覆盖真实参数顺序、安全体温与原生同步、温度伤害入口、后置回调覆盖、装备立即纠正、卸下恢复与原生复活／冷却。可选本机审计直接读取自己安装的温度、生命、装备和客户端温度同步函数，原生源码仅在内存使用，CI默认无需安装游戏：
+
+```powershell
+python tools/audit_starcore_native.py --scripts-zip "D:\SteamLibrary\steamapps\common\Don't Starve Together\data\databundles\scripts.zip"
+```
+
+重建图片后运行 `python tools/check_assets.py`，核对编译帧、BILD 符号表的排序与哈希、贴图 mip 层、图集引用与可用的原图哈希，并检查生成的动作预览。
 
 游戏内验证可从新建世界和已有存档分别开始：启用服务器 Mod、选择超人，检查开局装备、采集、夜视、白天回血、热视线，以及飞行跨海与洞穴断层、安全着陆、地图瞬移和成功／失败提示；再检查戴帽、骑乘、洞穴切换、摄像机转向、保存读取与远程玩家加入。自动检查和几何预览不能替代这些游戏操作。
 

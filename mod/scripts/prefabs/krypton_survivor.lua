@@ -1,17 +1,23 @@
 local MakePlayerCharacter = require("prefabs/player_common")
 local Flight = require("krypton_flight")
+local EatingVisual = require("krypton_eating_visual")
+local ToolActions = require("krypton_tool_actions")
+local StarcoreStarter = require("krypton_starcore_starter")
 local assets = {
     Asset("ANIM", "anim/krypton_survivor.zip"),
     Asset("ANIM", "anim/krypton_flight.zip"),
+    Asset("ANIM", "anim/krypton_eating.zip"),
     Asset("ANIM", "anim/ghost_wilson_build.zip"),
 }
-local prefabs = { "krypton_staff", "krypton_heatvision_fx" }
+local prefabs = { "krypton_staff", "krypton_heatvision_fx", "krypton_starcore_amulet" }
 
 local function common_postinit(inst)
     inst:AddTag("kryptonian")
     inst.MiniMapEntity:SetIcon("avatar_krypton_survivor.tex")
     inst.AnimState:SetBuild("krypton_survivor")
     Flight.CommonInit(inst)
+    EatingVisual.CommonInit(inst)
+    ToolActions.CommonInit(inst)
     local function EnableNightVision(player)
         if player.components.playervision ~= nil then
             -- Preserve normal daylight warmth; brighten darkness without the
@@ -42,9 +48,10 @@ end
 local function master_postinit(inst)
     local tuning = TUNING.KRYPTON_SURVIVOR
     Flight.MasterInit(inst)
+    inst:AddComponent("krypton_starcore")
     inst.soundsname = "wilson"
     inst.ghostbuild = "ghost_wilson_build"
-    inst.starting_inventory = { "krypton_staff" }
+    inst.starting_inventory = { "krypton_staff", "krypton_starcore_amulet" }
 
     -- Keep the custom build across loading, resurrection and outfit changes.
     local skinner = inst.components.skinner
@@ -81,7 +88,14 @@ local function master_postinit(inst)
         if staff ~= nil then
             inventory:Equip(staff)
         end
+        StarcoreStarter.Ensure(player)
     end
+    -- Deferred until native inventory/component loading has completed. Old
+    -- saves keep their backpack/armor equipped and receive one gift in storage.
+    inst:DoTaskInTime(0, StarcoreStarter.Ensure)
+    inst:ListenForEvent("ms_respawnedfromghost", function(player)
+        player:DoTaskInTime(0, StarcoreStarter.Ensure)
+    end)
 end
 
 return MakePlayerCharacter("krypton_survivor", prefabs, assets, common_postinit, master_postinit)

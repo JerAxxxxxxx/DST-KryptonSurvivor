@@ -1,15 +1,15 @@
 # Artwork sources / 美术来源
 
-Character, portraits, flight and Rao's Edge textures were extracted from four source
+Character, portraits, flight, eating expressions and Rao's Edge textures were extracted from five source
 images supplied by the project owner, stored in the repository's assets/source/:
-superman-motion.jpg, superman-standing.jpg, superman-flight.jpg and raos-edge.png. These filenames
+superman-motion.jpg, superman-standing.jpg, superman-flight.jpg, superman-eat.jpg and raos-edge.png. These filenames
 were changed for organization; the image bytes remain identical to the originals.
 The character depicts DC's Superman. Some supplied images were generated with
 Gemini; exact model versions are not inferred from the original filenames.
 
 角色、头像和拉奥之锋贴图提取自用户提供的原图；角色身份为 DC 超人。
 只对已有像素抠图、切片、旋转、镜像和缩放，没有用程序重画人物或武器。
-四张使用原图保存在项目 assets/source/，字节内容与收到的原图相同。
+五张使用原图保存在项目 assets/source/，字节内容与收到的原图相同。
 完整来源与原始文件名记录见项目 assets/README.md。
 
 LICENSE applies to project code and documentation. Supplied artwork and derived
@@ -26,3 +26,14 @@ checkerboard was removed with an alpha mask; the original file is unchanged.
 krypton_flight.zip contains an original build and original hover/movement
 animation data using only these pixels and whole-pose translation. It contains
 no base-game animation files. Normal actions still load the installed game.
+
+Eating expressions use three supplied front-facing heads from eat.jpg. The JPG
+checkerboard was removed by an alpha mask; original image bytes are unchanged.
+krypton_eating.zip contains only the extracted head textures and their original
+build data. Native eating body motions, food sprites and sounds load from the
+installed game; no base-game eating animation files are distributed.
+
+The Starcore Amulet uses the orange energy core extracted from the supplied
+Rao's Edge source image. Its custom build and inventory texture contain only
+those selected pixels. Native amulets animations load from the installed game;
+no game-owned animation or artwork is included in the amulet archive.

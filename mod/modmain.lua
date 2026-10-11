@@ -24,9 +24,10 @@ G.TUNING.KRYPTON_SURVIVOR = {
     flight_toggle_interval = 0.35,
     map_teleport_enabled = GetModConfigData("map_teleport_enabled") ~= false,
     map_teleport_interval = 0.35,
+    starcore_revive_cooldown = G.TUNING.TOTAL_DAY_TIME,
 }
 
-PrefabFiles = { "krypton_survivor", "krypton_staff", "krypton_heatvision_fx" }
+PrefabFiles = { "krypton_survivor", "krypton_staff", "krypton_heatvision_fx", "krypton_starcore_amulet" }
 Assets = {
     Asset("ANIM", "anim/krypton_survivor.zip"),
     Asset("ANIM", "anim/ghost_wilson_build.zip"),
@@ -48,12 +49,27 @@ Assets = {
     Asset("IMAGE", "images/names_krypton_survivor.tex"),
     Asset("ATLAS", "images/names_gold_krypton_survivor.xml"),
     Asset("IMAGE", "images/names_gold_krypton_survivor.tex"),
+    Asset("ATLAS", "images/inventoryimages/krypton_starcore_amulet.xml"),
+    Asset("IMAGE", "images/inventoryimages/krypton_starcore_amulet.tex"),
 }
 
 local S = G.STRINGS
 local zh = language == "zh"
 S.NAMES.KRYPTON_SURVIVOR = zh and "超人" or "Superman"
 S.NAMES.KRYPTON_STAFF = zh and "拉奥之锋" or "Rao's Edge"
+S.NAMES.KRYPTON_STARCORE_AMULET = zh and "星核护符" or "Starcore Amulet"
+S.RECIPE_DESC.KRYPTON_STARCORE_AMULET = zh
+    and "保持干燥与安全体温，为生命保留一道星光。"
+    or "Stay dry and comfortable, and return from death."
+S.KRYPTON_STARCORE = zh and {
+    REVIVED = "星核护符已将我复活，1个游戏日后再次就绪。",
+    READY = "星核护符已就绪。",
+    COOLDOWN = "星核护符正在恢复，暂时无法再次复活。",
+} or {
+    REVIVED = "The Starcore revived me. It will be ready in one game day.",
+    READY = "The Starcore Amulet is ready.",
+    COOLDOWN = "The Starcore is recovering and cannot revive me yet.",
+}
 S.CHARACTER_TITLES.krypton_survivor = zh and "超人 · 氪星幸存者" or "Superman · Krypton Survivor"
 S.CHARACTER_NAMES.krypton_survivor = S.NAMES.KRYPTON_SURVIVOR
 S.CHARACTER_DESCRIPTIONS.krypton_survivor = zh
@@ -68,9 +84,22 @@ S.CHARACTERS.KRYPTON_SURVIVOR = G.deepcopy(S.CHARACTERS.GENERIC)
 for _, speech in pairs(S.CHARACTERS) do
     if speech.DESCRIBE then
         speech.DESCRIBE.KRYPTON_STAFF = zh and "氪星的力量，尽在掌握。" or "The power of Krypton, in one hand."
+        speech.DESCRIBE.KRYPTON_STARCORE_AMULET = {
+            GENERIC = zh and "保持干燥与安全体温，星核还会在死亡后唤回我。"
+                or "It keeps me dry and comfortable, and can bring me back from death.",
+            COOLDOWN = S.KRYPTON_STARCORE.COOLDOWN,
+        }
         speech.DESCRIBE.KRYPTON_SURVIVOR = G.deepcopy(speech.DESCRIBE.WILSON or speech.DESCRIBE.PLAYER)
     end
 end
+
+AddRecipe2("krypton_starcore_amulet", {
+    G.Ingredient("goldnugget", 3), G.Ingredient("nightmarefuel", 2), G.Ingredient("redgem", 1),
+}, G.TECH.NONE, {
+    builder_tag = "kryptonian",
+    atlas = "images/inventoryimages/krypton_starcore_amulet.xml",
+    image = "krypton_starcore_amulet.tex",
+}, { "CHARACTER" })
 
 AddMinimapAtlas("images/avatars/avatar_krypton_survivor.xml")
 -- The frontend preview does not use the player's server-side skinner component.
@@ -157,4 +186,4 @@ local map_mode = GetModConfigData("map_teleport_input", true) or "ctrl_right"
 AddClassPostConstruct("screens/mapscreen", require("krypton_map_teleport_input")(G, map_mode, function(x, z)
     SendModRPCToServer(GetModRPC(rpc_namespace, "MapTeleport"), x, z)
 end))
-print("[Krypton Survivor] Registered krypton_survivor; version 0.6.2")
+print("[Krypton Survivor] Registered krypton_survivor; version 0.7.2")

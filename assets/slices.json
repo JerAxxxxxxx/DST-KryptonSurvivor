@@ -4,7 +4,18 @@
     "motion": {"path":"assets/source/superman-motion.jpg","tolerance":22},
     "standing": {"path":"assets/source/superman-standing.jpg","tolerance":27},
     "weapon": {"path":"assets/source/raos-edge.png","tolerance":45},
-    "flight": {"path":"assets/source/superman-flight.jpg","tolerance":30}
+    "flight": {"path":"assets/source/superman-flight.jpg","tolerance":30},
+    "eating": {"path":"assets/source/superman-eat.jpg","tolerance":30}
+  },
+  "starcore": {
+    "selection": "starcore-core",
+    "build": "krypton_starcore_build",
+    "bank": "amulets",
+    "animation": "redamulet",
+    "symbol": "redamulet",
+    "frame": 0,
+    "ground": {"fit_size":[72,81],"symbol_center":[-37.549999,-18.949999],"atlas_size":256},
+    "inventory": {"size":[128,128],"fit_size":[69,77],"center":[64,64]}
   },
   "workshop_preview": {
     "source": "standing",
@@ -50,7 +61,31 @@
       {"selection":"flight-move-back","frame":5,"direction":"back","facing":2,"animation":"krypton_flight_move","anchor":[942,331],"local_anchor":[0,-28],"scale":1.6}
     ]
   },
+  "eating": {
+    "build": "krypton_eating_build",
+    "frames_per_second": 30,
+    "poses": [
+      {"selection":"eating-open","pose":"open","symbol":"krypton_eat_open","anchor":[144.488,170.000],"local_anchor":[-2.70424,-68.000],"scale":0.70},
+      {"selection":"eating-chew","pose":"chew","symbol":"krypton_eat_chew","anchor":[513.449,170.000],"local_anchor":[-2.70424,-68.000],"scale":0.70},
+      {"selection":"eating-satisfied","pose":"satisfied","symbol":"krypton_eat_satisfied","anchor":[879.479,171.154],"local_anchor":[-2.70424,-68.000],"scale":0.70}
+    ],
+    "timelines": {
+      "eat_pre": [[0,"open"]],
+      "eat_lag": [[0,"open"]],
+      "eat": [[0,"open"],[12,"chew"],[18,"open"],[24,"chew"],[30,"open"],[36,"chew"],[42,"open"],[48,"chew"],[54,"open"],[60,"chew"],[66,"satisfied"],[77,"open"],[83,"chew"],[87,"satisfied"]],
+      "quick_eat_pre": [[6,"open"]],
+      "quick_eat_lag": [[0,"open"]],
+      "quick_eat": [[0,"open"],[4,"chew"],[9,"satisfied"]],
+      "quick_drink_pre": [[3,"open"]],
+      "quick_drink_lag": [[0,"open"]],
+      "quick_drink": [[0,"open"],[13,"satisfied"]]
+    }
+  },
   "selections": {
+    "starcore-core":{"source":"weapon","polygon":[[514,178.826],[521,185.481],[534,190.813],[548,195.476],[554,200.798],[549,206.465],[537,211.793],[521,215.46],[506,212.794],[498,209.458],[491,204.801],[485,201.797],[481,197.807],[490,192.479],[502,185.814]],"largest_component":true},
+    "eating-open":{"source":"eating","polygon":[[30,8],[242,8],[242,305],[30,305]]},
+    "eating-chew":{"source":"eating","polygon":[[398,8],[613,8],[613,305],[398,305]]},
+    "eating-satisfied":{"source":"eating","polygon":[[765,8],[994,8],[994,305],[765,305]]},
     "flight-idle-front":{"source":"flight","polygon":[[36,10],[163,10],[163,242],[36,242]]},
     "flight-idle-side":{"source":"flight","polygon":[[209,10],[323,10],[323,242],[209,242]]},
     "flight-idle-back":{"source":"flight","polygon":[[362,10],[510,10],[510,259],[362,259]]},

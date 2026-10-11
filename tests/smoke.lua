@@ -13,17 +13,24 @@ end
 
 Asset = function(kind, path) return { kind = kind, path = path } end
 STRINGS = {
-    NAMES = {}, CHARACTER_TITLES = {}, CHARACTER_NAMES = {}, CHARACTER_DESCRIPTIONS = {},
+    NAMES = {}, RECIPE_DESC = {}, CHARACTER_TITLES = {}, CHARACTER_NAMES = {}, CHARACTER_DESCRIPTIONS = {},
     CHARACTER_QUOTES = {}, CHARACTER_SURVIVABILITY = {}, SKIN_NAMES = {},
     CHARACTERS = { GENERIC = { DESCRIBE = { WILSON = { GENERIC = "Hi %s" } } } },
 }
-TUNING = {}
+TUNING = { TOTAL_DAY_TIME = 480 }
+EQUIPSLOTS = { HANDS = "hands", BODY = "body" }
 LanguageTranslator = { defaultlang = "zh" }
 GLOBAL = { STRINGS = STRINGS, TUNING = TUNING, LanguageTranslator = LanguageTranslator, deepcopy = deepcopy,
-    KEY_R = 114, KEY_V = 118, TheNet = { IsDedicated = function() return true end } }
+    KEY_R = 114, KEY_V = 118, TheNet = { IsDedicated = function() return true end },
+    TECH = { NONE = {} }, Ingredient = function(name, amount) return { type = name, amount = amount } end }
+TheNet = GLOBAL.TheNet
 package.preload["krypton_heatvision"] = function() return load_source("mod/scripts/krypton_heatvision.lua") end
 package.preload["krypton_heatvision_input"] = function() return load_source("mod/scripts/krypton_heatvision_input.lua") end
 package.preload["krypton_flight_visual"] = function() return load_source("mod/scripts/krypton_flight_visual.lua") end
+package.preload["krypton_eating_visual"] = function() return load_source("mod/scripts/krypton_eating_visual.lua") end
+package.preload["krypton_tool_actions"] = function() return load_source("mod/scripts/krypton_tool_actions.lua") end
+package.preload["krypton_starcore_starter"] = function() return load_source("mod/scripts/krypton_starcore_starter.lua") end
+package.preload["krypton_eating_visual_data"] = function() return load_source("mod/scripts/krypton_eating_visual_data.lua") end
 package.preload["krypton_flight"] = function() return load_source("mod/scripts/krypton_flight.lua") end
 package.preload["krypton_flight_input"] = function() return load_source("mod/scripts/krypton_flight_input.lua") end
 package.preload["krypton_map_teleport"] = function() return load_source("mod/scripts/krypton_map_teleport.lua") end
@@ -35,6 +42,10 @@ AddModRPCHandler = function(namespace, name, fn)
     ability_rpcs[name] = fn
 end
 local config = {}
+local recipes = {}
+AddRecipe2 = function(name, ingredients, tech, settings, filters)
+    recipes[name] = { ingredients = ingredients, tech = tech, settings = settings, filters = filters }
+end
 GetModConfigData = function(name) return config[name] end
 local added_character, puppet_hook, map_hook
 AddModCharacter = function(name, gender, modes)
@@ -51,6 +62,13 @@ load_source("mod/modmain.lua")
 assert(added_character == "krypton_survivor")
 assert(STRINGS.NAMES.KRYPTON_SURVIVOR == "超人")
 assert(STRINGS.NAMES.KRYPTON_STAFF == "拉奥之锋")
+assert(STRINGS.NAMES.KRYPTON_STARCORE_AMULET == "星核护符")
+assert(TUNING.KRYPTON_SURVIVOR.starcore_revive_cooldown == 480)
+local recipe = recipes.krypton_starcore_amulet
+assert(recipe.settings.builder_tag == "kryptonian" and recipe.tech == GLOBAL.TECH.NONE)
+assert(recipe.ingredients[1].type == "goldnugget" and recipe.ingredients[1].amount == 3)
+assert(recipe.ingredients[2].type == "nightmarefuel" and recipe.ingredients[2].amount == 2)
+assert(recipe.ingredients[3].type == "redgem" and recipe.ingredients[3].amount == 1)
 assert(STRINGS.CHARACTER_TITLES.krypton_survivor == "超人 · 氪星幸存者")
 assert(STRINGS.CHARACTERS.KRYPTON_SURVIVOR ~= STRINGS.CHARACTERS.GENERIC)
 assert(type(ability_rpcs.HeatVision) == "function" and TUNING.KRYPTON_SURVIVOR.heatvision_damage == 2000)
@@ -64,6 +82,7 @@ config.heatvision_damage = 50000
 load_source("mod/modmain.lua")
 assert(STRINGS.NAMES.KRYPTON_SURVIVOR == "Superman")
 assert(STRINGS.NAMES.KRYPTON_STAFF == "Rao's Edge")
+assert(STRINGS.NAMES.KRYPTON_STARCORE_AMULET == "Starcore Amulet")
 assert(TUNING.KRYPTON_SURVIVOR.staff_damage == 10000 and TUNING.KRYPTON_SURVIVOR.speed == 2)
 assert(TUNING.KRYPTON_SURVIVOR.heatvision_damage == 50000)
 
@@ -103,6 +122,10 @@ local player = {
         AddOverrideBuild = function(self, value) self.override_build = value end,
         IsCurrentAnimation = function() return false end },
     AddTag = function(self, tag) self.tags[tag] = true end,
+    AddComponent = function(self, name)
+        assert(name == "krypton_starcore")
+        self.components[name] = { starter_granted = false }
+    end,
     RemoveTag = function(self, tag) self.tags[tag] = nil end,
     DoTaskInTime = function(self, delay, fn) self.visiontask = fn end,
     DoPeriodicTask = function(self, period, fn) self.regentask = fn end,
@@ -150,9 +173,16 @@ player.components.locomotor = {
 }
 player.components.drownable = { enabled = true }
 local starter = { prefab = "krypton_staff" }
+local starter_amulet = { prefab = "krypton_starcore_amulet", components = { inventoryitem = { owner = player } } }
 player.components.inventory = {
-    FindItem = function(self, test) return test(starter) and starter or nil end,
-    Equip = function(self, item) self.equipped = item end,
+    FindItem = function(self, test) return test(starter) and starter or (test(starter_amulet) and starter_amulet or nil) end,
+    GetEquippedItem = function(self, slot)
+        if slot == EQUIPSLOTS.BODY then return self.body end
+        return self.equipped
+    end,
+    Equip = function(self, item)
+        if item == starter_amulet then self.body = item else self.equipped = item end
+    end,
 }
 common(player)
 assert(player.tags.kryptonian and player.AnimState.build == "krypton_survivor")
@@ -190,16 +220,18 @@ assert(player.components.health.delta == nil and player.components.sanity.delta 
 assert(player.components.health.max == 10000 and player.components.hunger.max == 10000)
 assert(player.components.sanity.max == 10000 and player.components.sanity.rate_modifier == 0)
 assert(player.components.hunger.rate == 0 and player.components.locomotor.mult == 2)
-assert(#player.starting_inventory == 1 and player.starting_inventory[1] == "krypton_staff")
+assert(#player.starting_inventory == 2 and player.starting_inventory[1] == "krypton_staff"
+    and player.starting_inventory[2] == "krypton_starcore_amulet")
 player:OnNewSpawn()
 assert(player.components.inventory.equipped == starter)
+assert(player.components.inventory.body == starter_amulet and player.components.krypton_starcore.starter_granted)
 player.components.skinner.skin_data = {}
 player.components.skinner:SetSkinMode("ghost_skin")
 assert(player.components.skinner.skin_data.ghost_skin == "ghost_wilson_build")
 player.components.skinner:SetSkinMode("normal_skin")
 assert(player.components.skinner.skin_data.normal_skin == "krypton_survivor")
 
-ACTIONS = { CHOP = { id = "CHOP" }, MINE = { id = "MINE" }, HAMMER = { id = "HAMMER" } }
+ACTIONS = { CHOP = { id = "CHOP" }, MINE = { id = "MINE" }, HAMMER = { id = "HAMMER" }, DIG = { id = "DIG" } }
 TheWorld = { ismastersim = true, state = { isnight = false }, cave = false,
     HasTag = function(self, tag) return tag == "cave" and self.cave end }
 MakeInventoryPhysics = function() end
@@ -246,6 +278,7 @@ TheWorld.ismastersim = false
 local client = staff_prefab.fn()
 assert(next(client.components) == nil and client.pristine)
 assert(client.tags.CHOP_tool and client.tags.MINE_tool and client.tags.HAMMER_tool)
+assert(client.tags.DIG_tool, "Remote clients need the dig action before server components exist")
 TheWorld.ismastersim = true
 local staff = staff_prefab.fn()
 assert(staff.components.weapon.damage == 10000)
@@ -277,6 +310,7 @@ assert(primary.components.combat.hits == nil and follower.components.combat.hits
 assert(dead.components.combat.hits == nil and attacker.components.combat.hits == nil)
 assert(staff.components.tool.actions.CHOP == 10 and staff.components.tool.actions.MINE == 10)
 assert(staff.components.tool.actions.HAMMER == 10 and staff.components.tool.tough)
+assert(staff.components.tool.actions.DIG == 10, "Digging must work on the server as well as appear on the client")
 assert(staff.components.finiteuses == nil and staff.components.fueled == nil)
 assert(staff.components.equippable.restrictedtag == "kryptonian")
 local owner = { tags = { player = true, kryptonian = true }, components = {},

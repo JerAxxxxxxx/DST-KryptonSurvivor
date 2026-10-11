@@ -2,7 +2,7 @@
 
 Steam《饥荒联机版》超人人物 Mod。超高属性、完整夜视、热视线和专属战斧 **拉奥之锋 / Rao's Edge**，适合与朋友轻松探索和战斗。
 
-**仓库版本：0.6.2。Steam 创意工坊版本：0.5.1，待更新。** 支持中文和英语。0.6.2 新增飞行与地图瞬移，跨海飞行与瞬移已进行游戏测试；洞穴与联机同步仍需进一步验证。工坊 0.5.1 暂不包含这两项能力。
+**仓库版本：0.7.2，已完成整体游戏复测，准备上传工坊；当前确认的工坊版本：0.6.5。** 支持中文和英语。相对0.6.5，新增星核护符：保持干燥与安全体温、免疫寒冷和过热伤害，以及原地自动复活。
 
 [Steam 创意工坊](https://steamcommunity.com/sharedfiles/filedetails/?id=3811663817) · [更新记录](docs/changelog.md) · [开发说明](docs/build.md)
 
@@ -15,6 +15,7 @@ Steam《饥荒联机版》超人人物 Mod。超高属性、完整夜视、热�
 - 常驻完整夜视，夜晚与洞穴均可看清环境，无鼹鼠视野滤镜。
 - 地表白天每秒恢复 **100 生命、100 理智**，恢复至当前上限为止；黄昏、夜晚、洞穴及死亡或幽灵状态不触发。
 - 移动速度可设置为普通角色的 **1.5、2 或 3 倍**。
+- 吃东西时切换张嘴、咀嚼与满足表情，沿用原版食物操作与身体动作。
 
 ## 热视线
 
@@ -27,7 +28,7 @@ Steam《饥荒联机版》超人人物 Mod。超高属性、完整夜视、热�
 
 聊天、界面操作和建筑放置时不会触发；忙碌、工作、死亡、幽灵及服务器暂停期间无法发射。
 
-## 飞行与地图瞬移（0.6.2）
+## 飞行与地图瞬移
 
 两项能力均由人物自带，无需装备，不消耗饥饿、理智、材料或耐久。
 
@@ -39,17 +40,32 @@ Steam《饥荒联机版》超人人物 Mod。超高属性、完整夜视、热�
 
 悬浮待机与飞行移动使用用户提供的三方向原图。飞行循环采用空手姿态，暂不显示手持武器及帽子；攻击、采集和热视线恢复现有人物动作与装备显示，装备属性仍然生效。
 
+飞行移动时播放轻微风声，悬停时安静；飞行期间不播放走路脚步声，落地和骑乘使用正常脚步声。
+
+## 专属装备：星核护符
+
+- 开局自带，放在原版**身体装备栏**，仅超人可装备；无限耐久，无资源消耗。
+- 旧存档首次升级会补发一件；身体栏已有背包或防具时放入物品栏，满包则掉在身边。之后不会因丢失或重进重复补发。
+- 装备后潮湿值清零并保持干燥，免疫寒冷和过热造成的生命损失；体温保持在安全范围，避免寒冷和过热提示，卸下后恢复正常温度变化。
+- 装备且复活能力就绪时，死亡后在原位置自动复活，恢复到当前生命上限；原版其余物品掉落规则保留，护符保留。
+- 成功复活后冷却**一个游戏日**，默认 **480 秒**模拟时间。冷却期间环境保护仍有效，再次死亡无法自动复活；冷却随人物保存，换护符或制作新护符不会重置。
+- 自动复活沿用游戏的幽灵／可复活尸体机制；无这两种机制的荒野模式保留原版死亡重选规则。
+- 可在超人的人物制作分类中徒手制作：**金块 ×3、噩梦燃料 ×2、红宝石 ×1**。检查冷却中的护符会提示正在恢复，冷却结束且佩戴时提示已就绪。
+
+效果范围为潮湿、寒冷伤害和过热伤害；火焰、战斗、食物的生命／饥饿／理智效果及冻结控制仍遵循游戏规则。
+
 ## 专属战斧：拉奥之锋
 
 - 开局自带并自动装备，仅超人可以使用。
 - 高额近战伤害，加长攻击距离，并对目标周围造成范围伤害。
 - 范围伤害跳过玩家、墙、建筑及已有领主的随从。
-- 集攻击、砍树、挖矿、锤砸于一体，工作效率为普通工具的 **10 倍**。
+- 集攻击、砍树、挖矿、锤砸、挖掘于一体，工作效率为普通工具的 **10 倍**。
+- 空格和左键优先采集浆果、草和树枝，采完后不会挖掉植物；需要移植时右键挖掘。树桩仍可用空格挖掉，挖掘不消耗耐久。挖地皮仍属于草叉功能。
 - 无限耐久；装备后在夜晚和洞穴提供照明，不消耗燃料。
 
 ## 安装与使用
 
-1. 在上方 Steam 创意工坊页面订阅稳定版 0.5.1。
+1. 在上方 Steam 创意工坊页面订阅已发布的版本。
 2. 在世界的**服务器模组**设置中启用本 Mod。
 3. 进入选人界面，选择**超人**。
 
@@ -59,7 +75,7 @@ Steam《饥荒联机版》超人人物 Mod。超高属性、完整夜视、热�
 
 ## 配置
 
-以下为仓库 0.6.2 的配置；工坊 0.5.1 不含飞行与地图瞬移设置。
+以下为仓库版本 0.7.2 的配置；当前已确认的工坊 0.6.5 包含挖掘、进食表情、飞行与地图瞬移设置。星核护符首版冷却固定为一个游戏日。
 
 | 配置 | 可选值 | 默认值 |
 | --- | --- | --- |
@@ -94,8 +110,10 @@ npm run check
 
 ## English
 
-A Superman character mod for **Don't Starve Together**, featuring powerful stats, full night vision, surface daytime health and sanity regeneration, innate heat vision, and the exclusive axe **Rao's Edge**. Version **0.5.1** is available on Steam Workshop.
+A Superman character mod for **Don't Starve Together**, featuring powerful stats, full night vision, surface daytime health and sanity regeneration, innate heat vision, and the exclusive axe **Rao's Edge**. The current confirmed Steam Workshop version is **0.6.5**. Version **0.7.2** adds the **Starcore Amulet**, has passed an overall local playtest and is being prepared for release.
+
+The amulet occupies the native body slot and is exclusive to Superman. It is provided on spawn and granted once to existing saves without replacing backpacks or armor. While equipped, it keeps moisture at zero and prevents cold/overheat health damage, keeping body temperature in a safe range to avoid cold and overheat warnings. Natural temperature changes resume after unequipping. When ready, it automatically revives its wearer at the death position with health restored to the current maximum. Successful revival starts a one-game-day cooldown (480 simulation seconds by default); environmental protection remains active during cooldown. The cooldown follows the player across saves and cannot be bypassed by swapping or crafting amulets. Native ghost/revivable-corpse modes are supported; Wilderness retains its native death/reroll rules. Craft with 3 gold nuggets, 2 nightmare fuel and 1 red gem, with no crafting station. Fire, combat, food health/hunger/sanity effects and freezing control retain their native behavior. Version 0.7.2 has passed an overall local playtest; detailed resurrection, save and remote multiplayer scenarios remain to be verified.
 
 Subscribe and enable it under server mods, then select Superman. Aim with the mouse and press **R** to fire heat vision without equipment or resource cost. The key, damage, movement speed and language are configurable. Direct beam hits exclude allies and structures; ignited targets can spread native fire. Code and documentation use the MIT license; artwork retains the source notes linked above.
 
-Repository version **0.6.2** adds innate flight and map teleportation; the Steam Workshop update is pending. Ocean flight and map teleportation have been tested in-game, while caves and multiplayer still need further verification. Flight starts enabled, toggles with **V** (or B), and supports oceans and internal cave gaps while keeping ordinary obstacle collisions. Land on safe ground or a boat before disabling it. **Ctrl + right-click the map** closes the map and teleports after gameplay resumes, within the current world shard and without distance or material costs. Success shows “Teleported to the selected location.” Unsafe, occupied and restricted destinations are rejected with a reason. Dismount before toggling flight or teleporting. Hover and movement animations use the supplied artwork. Flight loops show an empty-handed pose without held items or hats; attacks, harvesting and heat vision restore the normal character animations. Equipped items retain their effects.
+Released version **0.6.5** added shovel digging, airborne wind and eating expressions to version 0.6.2. It corrects the eating-head resource format and changes Rao's Edge controls: SPACE and left-click harvest plants without uprooting them after picking; right-click digs them up. Stumps remain diggable with SPACE. The user has retested eating and digging without reported problems. Supplied opening-mouth, chewing and satisfied expressions retain native body and food animations. Airborne movement uses gentle wind instead of footsteps; hovering is quiet, and normal ground/mount sounds are retained. Digging has no durability cost; turf digging remains a pitchfork action. Version **0.6.2** introduced innate flight and map teleportation. Ocean flight, map teleportation and cave gameplay have positive user test feedback; detailed equipment and remote multiplayer checks remain pending. Flight starts enabled, toggles with **V** (or B), and supports oceans and internal cave gaps while keeping ordinary obstacle collisions. Land on safe ground or a boat before disabling it. **Ctrl + right-click the map** closes the map and teleports after gameplay resumes, within the current world shard and without distance or material costs. Success shows “Teleported to the selected location.” Unsafe, occupied and restricted destinations are rejected with a reason. Dismount before toggling flight or teleporting. Hover and movement animations use the supplied artwork. Flight loops show an empty-handed pose without held items or hats; attacks, harvesting and heat vision restore the normal character animations. Equipped items retain their effects.

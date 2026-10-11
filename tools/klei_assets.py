@@ -85,6 +85,20 @@ def hash_name(name):
     return value
 
 
+def validate_build_symbols(build):
+    """Check the ordered BILD symbol table required by the native loader.
+
+    Klei's buildanimation.py ExportBuild sorts symbols by unsigned SDBM hash.
+    A dictionary-based preview can resolve an unordered table that the engine
+    cannot, so validate the serialized order rather than only the decoded art.
+    """
+    hashes = [symbol['hash'] for symbol in build['symbols']]
+    assert hashes == sorted(hashes), 'BILD symbols must be sorted by unsigned hash'
+    assert len(hashes) == len(set(hashes)), 'BILD symbol hashes must be unique'
+    assert all(symbol['hash'] == hash_name(symbol['name']) for symbol in build['symbols']), \
+        'BILD symbol hash does not match its name'
+
+
 def write_anim(animations, names):
     """Serialize original ANIM v4 frames; never reads or copies game motions."""
     frame_count = sum(len(animation['frames']) for animation in animations)
@@ -181,6 +195,10 @@ def crop_symbol(build, atlas, symbol, frame):
 
 def write_build(name, symbols, sprite_images, output, atlas_size=2048, extra_files=None):
     """Pack independently drawn sprites, preserving symbol hashes and frame ids."""
+    # The engine requires an ordered symbol index. Template-derived builds were
+    # already ordered; independently authored multi-symbol builds may not be.
+    symbols = sorted(symbols, key=lambda symbol: symbol['hash'])
+    validate_build_symbols({'symbols': symbols})
     atlas = Image.new('RGBA', (atlas_size, atlas_size))
     rects = {}
     x = y = line_height = 4
@@ -218,6 +236,7 @@ def write_build(name, symbols, sprite_images, output, atlas_size=2048, extra_fil
     data += struct.pack('<I', len(symbols))
     for s in symbols:
         data += struct.pack('<I', s['hash']) + string(s['name'])
+    validate_build_symbols(read_build(data))
     output.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(output, 'w', compression=zipfile.ZIP_DEFLATED) as z:
         z.writestr('build.bin', data)
