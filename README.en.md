@@ -1,0 +1,133 @@
+# Krypton Survivor
+
+[简体中文](README.md) · **English**
+
+Bring DC's Superman to **Don't Starve Together** on Steam. Enjoy powerful stats, full night vision, heat vision, flight, map teleportation, the exclusive axe **Rao's Edge** and the **Starcore Amulet**. Built for relaxed exploration and overpowered combat with friends.
+
+**Current version: 0.7.2**, available in this repository and on the Steam Workshop. Supports Chinese and English.
+
+[Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3811663817) · [Changelog](docs/changelog.md) · [Development guide](docs/build.md) · [Report an issue](https://github.com/JerAxxxxxxx/DST-KryptonSurvivor/issues)
+
+![Superman holding Rao's Edge, shown from the front, side and back](assets/source/superman-standing.jpg)
+
+## Installation and controls
+
+1. Subscribe on the [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3811663817).
+2. Enable the mod under **Server Mods** in your world's settings.
+3. Select **Superman** on the character selection screen.
+
+All players need the same mod version. After an update, let Steam finish downloading it and restart the game. Enable one copy of the mod if you also have a local installation.
+
+For a local installation, copy the complete `mod/` directory to your game's `mods/KryptonSurvivor/` directory, then enable it under Server Mods.
+
+| Action | Control |
+| --- | --- |
+| Heat vision | Aim with the mouse and press **R**. No equipment required. |
+| Toggle flight | Press **V**. Flight starts enabled. |
+| Map teleport | Open the map with **Tab**, hold **Ctrl**, then **right-click** the destination. |
+| Harvest with Rao's Edge | Use **Space** or **left-click** to pick berries, grass and twigs. |
+| Dig with Rao's Edge | **Right-click** to uproot plants. Tree stumps can also be dug with **Space**. |
+
+Heat vision and flight keys can be changed in the mod settings. Map teleport uses a keyboard and mouse; normal controller map controls remain available.
+
+## Character abilities
+
+- Maximum health, hunger and sanity are **10,000 each**.
+- No natural hunger loss or ongoing sanity drain. Instant effects, such as food penalties, can still change sanity.
+- Full night vision at night and in caves, without the Moggles color filter.
+- Regenerates **100 health and 100 sanity per second** during daytime on the surface, up to the current maximum. Regeneration stops at dusk, at night, in caves, and while dead or a ghost.
+- Movement speed can be set to **1.5×, 2× or 3×** a normal character's speed; the default is **1.5×**.
+- Eating uses open-mouth, chewing and satisfied expressions alongside the game's body, food and sound animations. The normal expression returns when eating ends or is interrupted.
+
+## Heat vision
+
+Heat vision is an innate ability. Aim with the mouse and press **R**, whether empty-handed or holding the axe.
+
+- **Range: 20** world units. Beams pierce multiple enemies in a straight line.
+- Damage is configurable separately from axe damage: **2,000, 10,000 or 50,000**, with **2,000** as the default.
+- No hunger, sanity or durability cost; the minimum firing interval is **0.35 seconds**.
+- Beams start at the eyes and follow head movement, with a bright core, glow and eye lights.
+- Direct hits skip players, followers, companions, domesticated creatures, walls and structures.
+- Surviving targets that can burn and are not fire-immune may catch fire. The game's normal fire spread still applies.
+
+The shortcut is inactive while chatting, interacting with interfaces or placing buildings. Heat vision cannot fire while busy, working, dead, a ghost, or while the server is paused.
+
+## Rao's Edge
+
+Superman's exclusive axe is provided and automatically equipped on spawn. Other characters cannot use it and will drop it if they pick it up.
+
+- Configurable damage: **2,000, 10,000 or 50,000**, default **2,000**.
+- Extended melee reach and area damage around the target. Area damage skips players, companions, walls, structures and creatures that already have a follower leader.
+- Works as an axe, pickaxe, hammer and shovel, at **10×** normal tool efficiency.
+- **Space and left-click prioritize harvesting** berries, grass and twigs. Continuing to hold Space after picking will not uproot those plants; use right-click when you want to transplant them. Tree stumps can still be dug with Space.
+- Unlimited durability. Attacks, tool work and lighting consume no fuel or resources.
+- Provides light for the wearer and nearby friends at night and in caves while equipped.
+
+Digging turf remains a **pitchfork** action and is not included.
+
+## Starcore Amulet
+
+The Starcore Amulet is exclusive to Superman and uses the native **body equipment slot**, shared with backpacks and armor. It has unlimited durability and no resource cost.
+
+- New characters receive and equip it on spawn. Existing saves receive one amulet on their first upgrade; an occupied body slot is left alone and the amulet goes into inventory, or drops nearby if inventory is full. Losing it or rejoining does not grant another copy.
+- While equipped, moisture is cleared and the wearer stays dry. Body temperature remains in a safe range—**10–50 °C by default**—to avoid cold and overheat warnings and health damage. Normal temperature changes resume after unequipping.
+- When equipped and ready, it automatically revives the wearer at the death position, restoring health to the **current maximum**. Existing maximum-health penalties still apply. The amulet is retained; other items follow normal death-drop rules.
+- Successful revival starts a **one-game-day cooldown**, normally **480 simulation seconds**. Environmental protection stays active during cooldown, but another death will not trigger revival until it is ready.
+- Cooldown is saved with the character and follows them between shards. Swapping or crafting amulets does not reset it.
+- Automatic revival uses the game's ghost or revivable-corpse mechanics. Wilderness modes without either mechanic retain normal death and character-reroll behavior.
+- Craft without a station in Superman's character crafting category: **3 Gold Nuggets + 2 Nightmare Fuel + 1 Red Gem**.
+
+Inspecting an amulet on cooldown reports that it is recovering; when cooldown ends while it is worn, Superman announces that it is ready.
+
+The protection covers moisture, cold damage and overheating damage. **Fire, combat damage, food effects on health/hunger/sanity, and freezing effects that immobilize the character still follow the game's rules.**
+
+## Flight and map teleport
+
+Both abilities are innate and use no hunger, sanity, materials or durability.
+
+**Flight** starts enabled. Press **V** to toggle it; players may choose **B** or disable the shortcut, and the server may disable the ability entirely. Fly over oceans and gaps within caves while retaining collisions with ordinary obstacles such as walls and trees.
+
+Return to safe land or a boat before turning flight off. Landing over open water or a cave void is refused. Flight is suspended while mounted; dismount before toggling flight or using map teleport.
+
+**Map teleport** uses **Ctrl + right-click** on the open map. The map closes, and teleportation takes place after gameplay resumes. There is no distance or material cost, but travel stays within the **current world shard**. Use normal entrances to travel between the surface and caves.
+
+Destinations outside the map, in cave voids, occupied by buildings or entrances, or blocked by native special barriers are rejected. Ocean destinations are allowed while flying; with flight off, select safe land or a boat. Success and failure messages explain the result. Busy, mounted, dead, ghost and server-paused states prevent teleportation. Normal map dragging, zooming, right-clicking and closing remain available.
+
+Hovering and flight movement use the supplied front, side and back artwork. Flight loops show an empty-handed pose without held items or hats; attacks, harvesting and heat vision restore the normal character animations and equipment display. Equipped items continue to provide their effects. Airborne movement uses gentle wind instead of walking footsteps, hovering is quiet, and normal ground and mount sounds resume when appropriate.
+
+## Configuration
+
+| Setting | Options | Default |
+| --- | --- | --- |
+| Language | Automatic, Chinese, English | Automatic |
+| Movement speed | 1.5×, 2×, 3× | 1.5× |
+| Axe damage | 2,000, 10,000, 50,000 | 2,000 |
+| Heat vision damage | 2,000, 10,000, 50,000 | 2,000 |
+| Heat vision key | R, G, Z, Disabled | R |
+| Flight ability (server) | Enabled, Disabled | Enabled |
+| Flight toggle key | V, B, Disable key | V |
+| Map teleport ability (server) | Enabled, Disabled | Enabled |
+| Map teleport input | Ctrl + right-click, Disabled | Ctrl + right-click |
+
+Each player sets their own heat vision key, flight toggle key and map teleport input in their mod configuration. The Starcore Amulet revival cooldown is fixed at one game day.
+
+## Development
+
+Lua checks require **Node.js 24**. From the repository root, run:
+
+```shell
+npm ci
+npm run check
+```
+
+`mod/` contains installable scripts and compiled assets. `assets/` contains the source artwork, slice definitions and source notes. `tools/` provides asset construction, preview and packaging utilities.
+
+Rebuilding artwork also requires **Python 3.13**, the dependencies in `requirements.txt`, and a local installation of Don't Starve Together. See the [development guide](docs/build.md) for setup and commands. Slice polygons and placements belong in `assets/slices.json`; generated parts and previews go in the ignored `build/` directory. Existing artwork is extracted and transformed without redrawing it.
+
+To report a problem, open an [issue](https://github.com/JerAxxxxxxx/DST-KryptonSurvivor/issues) with the version, reproduction steps, and relevant screenshots or logs.
+
+## License and artwork
+
+Code and documentation use the [MIT License](LICENSE). Character and weapon images and their derived textures retain the source and licensing notes in [the artwork guide](assets/README.md); including them in the repository does not automatically apply the code license to them.
+
+Base-game animations and effects are loaded from the installed game at runtime and are not redistributed in this repository or the mod package.
