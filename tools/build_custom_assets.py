@@ -33,6 +33,23 @@ for key,value in vision['beam'].items():visual_lines.append('        %s = %.6f,'
 visual_lines.extend(['    },','}'])
 (MOD/'scripts/krypton_heatvision_visual_data.lua').write_text('\n'.join(visual_lines)+'\n',encoding='utf8')
 
+
+# Mouth anchors use the same author-pixel/head-symbol mapping as the eye data.
+def write_frostbreath_data():
+    frost=spec['frostbreath']
+    lines=['-- Generated from assets/slices.json by tools/build_custom_assets.py.','return {']
+    for direction in ['front','side','back']:
+        layout=frost['mouth_points'][direction]
+        source=layout.get('inherit',direction)
+        head=spec['placement']['head'][source]
+        point=frost['mouth_points'][source]['source_point']
+        offset=[(point[i]-head['anchor'][i])*head['scale']+head['local_anchor'][i] for i in range(2)]
+        lines.append('    %s = { mouth = { %.6f, %.6f } },' % (direction,*offset))
+    lines.extend(['    pixels_per_unit = %.6f,' % frost['pixels_per_unit'],'}'])
+    (MOD/'scripts/krypton_frostbreath_visual_data.lua').write_text('\n'.join(lines)+'\n',encoding='utf8')
+
+write_frostbreath_data()
+
 def image(name):
     return Image.open(ART / (name + '.png')).convert('RGBA')
 

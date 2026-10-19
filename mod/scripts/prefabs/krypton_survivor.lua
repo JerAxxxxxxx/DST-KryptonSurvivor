@@ -3,19 +3,22 @@ local Flight = require("krypton_flight")
 local EatingVisual = require("krypton_eating_visual")
 local ToolActions = require("krypton_tool_actions")
 local StarcoreStarter = require("krypton_starcore_starter")
+local AbilityStatus = require("krypton_ability_status")
 local assets = {
     Asset("ANIM", "anim/krypton_survivor.zip"),
     Asset("ANIM", "anim/krypton_flight.zip"),
     Asset("ANIM", "anim/krypton_eating.zip"),
+    Asset("ANIM", "anim/krypton_frostbreath_head.zip"),
     Asset("ANIM", "anim/ghost_wilson_build.zip"),
 }
-local prefabs = { "krypton_staff", "krypton_heatvision_fx", "krypton_starcore_amulet" }
+local prefabs = { "krypton_staff", "krypton_heatvision_fx", "krypton_starcore_amulet", "krypton_frostbreath_fx" }
 
 local function common_postinit(inst)
     inst:AddTag("kryptonian")
     inst.MiniMapEntity:SetIcon("avatar_krypton_survivor.tex")
     inst.AnimState:SetBuild("krypton_survivor")
     Flight.CommonInit(inst)
+    AbilityStatus.CommonInit(inst)
     EatingVisual.CommonInit(inst)
     ToolActions.CommonInit(inst)
     local function EnableNightVision(player)
@@ -49,6 +52,7 @@ local function master_postinit(inst)
     local tuning = TUNING.KRYPTON_SURVIVOR
     Flight.MasterInit(inst)
     inst:AddComponent("krypton_starcore")
+    AbilityStatus.MasterInit(inst)
     inst.soundsname = "wilson"
     inst.ghostbuild = "ghost_wilson_build"
     inst.starting_inventory = { "krypton_staff", "krypton_starcore_amulet" }

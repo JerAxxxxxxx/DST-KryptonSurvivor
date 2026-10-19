@@ -9,12 +9,13 @@
 | 拉奥之锋 | [source/raos-edge.png](source/raos-edge.png) | Code_Generated_Image (2).png |
 | 悬浮待机、飞行移动的三方向完整姿态 | [source/superman-flight.jpg](source/superman-flight.jpg) | Gemini_Generated_Image_u7i1k8u7i1k8u7i1.jpg |
 | 吃东西时的张嘴、咀嚼及满足表情 | [source/superman-eat.jpg](source/superman-eat.jpg) | eat.jpg |
+| 吐息时的正面与侧面张嘴头部 | [source/superman-frostbreath-head.jpg](source/superman-frostbreath-head.jpg) | head.jpg |
 
 正式源文件仅调整文件名和存放目录，字节内容与收到的原图完全相同。角色身份为 DC 超人；部分图片由 Gemini 生成，原始文件名不用于推断生成模型的具体版本。
 
 根目录 MIT 许可证用于项目代码和文档。人物图、武器图及其衍生贴图保留此处的来源说明，不因收录到仓库而声明为项目原创或自动改用代码许可证。
 
-slices.json 是可修改的源选区。选区以 1024×341 为坐标参考，实际从高分辨率原图切取。头部五官已包含在原图头部中，额外 face、hair 符号透明，避免重复五官与头发。
+slices.json 是可修改的源选区。原有人物选区以 1024×341 为坐标参考，吐息头部使用各自声明的 1376×768 原图坐标，实际从原图切取。头部五官已包含在原图头部中，额外 face、hair 符号透明，避免重复五官与头发。
 
 允许的处理是抠图、选区、旋转、镜像、缩放和锚点调整。正面左侧披风被手臂遮住的部分，复用原图右侧披风的镜像像素。移动手臂会排除背后红披风的像素。未绘制新的线条、五官、衣服或肌肉。
 
@@ -27,6 +28,10 @@ slices.json 是可修改的源选区。选区以 1024×341 为坐标参考，实
 星核护符复用 `source/raos-edge.png` 中央的橙色发光核，仅在 `slices.json` 的 `starcore` 与 `starcore-core` 中记录选区和缩放位置；没有新增绘制项链或饰品像素。`tools/build_starcore_assets.py` 生成自有 `krypton_starcore_build.zip`、物品图集和忽略的编译预览。原版 `amulets.zip` 动作仅从本机读取或运行时加载，不随仓库分发。
 
 ui/ 中的名称 PNG 是早期已有的 SUPERMAN 文字素材，只用于名称界面，不是人物绘制来源。
+
+吐息头部来自用户提供的 `head.jpg`，只去除与边缘连通的白色纸底，保留眼白，再提取正面与侧面已有像素。`breath_head` 段记录等比缩放、颈部锚点及嘴部位置，`tools/build_frostbreath_head_assets.py` 生成只含自有 BILD 与贴图的头部包。背面沿用既有后脑，身体动作在运行时加载游戏资源。
+
+能力状态图标保存在 `source/ui/flight.png`、`protection.png` 和 `revival.png`，由 OpenAI 图像生成工具生成。完整提示词、生成方式和 SHA-256 记录于 [source/ui/prompts-and-provenance.json](source/ui/prompts-and-provenance.json)，不推断未由工具返回的模型版本。正式 PNG 保留生成结果的原始字节和透明通道；构建仅按 `hud_icons` 段裁切透明边界、等比缩放和居中，生成 128×128 图集。它们的来源与人物原图分别记录，代码的 MIT 许可证不自动改变图片的许可范围。
 
 热视线的眼部定位记录在 `slices.json` 的 `heatvision` 段，由构建工具转换为头部局部像素坐标。光束与眼部亮光运行时加载已安装游戏的 `wagdrone_laserwire_fx` 和 `bishop_attack`；角色的声音、幽灵与通用动作也使用游戏运行时资源。Mod 只提供自有的编译贴图、特效实体与玩法逻辑，不复制游戏原版动画、贴图或参考 Mod 美术。
 

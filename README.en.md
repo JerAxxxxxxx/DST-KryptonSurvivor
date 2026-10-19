@@ -2,9 +2,9 @@
 
 [简体中文](README.md) · **English**
 
-Bring DC's Superman to **Don't Starve Together** on Steam. Enjoy powerful stats, full night vision, heat vision, flight, map teleportation, the exclusive axe **Rao's Edge** and the **Starcore Amulet**. Built for relaxed exploration and overpowered combat with friends.
+Bring DC's Superman to **Don't Starve Together** on Steam. Enjoy powerful stats, full night vision, heat vision, frost breath, flight, map teleportation, the exclusive axe **Rao's Edge** and the **Starcore Amulet**. Built for relaxed exploration and overpowered combat with friends.
 
-**Current version: 0.7.2**, available in this repository and on the Steam Workshop. Supports Chinese and English.
+**Current version: 0.8.2, available on the Steam Workshop.** Supports Chinese and English.
 
 [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3811663817) · [Changelog](docs/changelog.md) · [Development guide](docs/build.md) · [Report an issue](https://github.com/JerAxxxxxxx/DST-KryptonSurvivor/issues)
 
@@ -23,12 +23,13 @@ For a local installation, copy the complete `mod/` directory to your game's `mod
 | Action | Control |
 | --- | --- |
 | Heat vision | Aim with the mouse and press **R**. No equipment required. |
+| Frost breath | Aim with the mouse and press **X** to breathe cold air. |
 | Toggle flight | Press **V**. Flight starts enabled. |
 | Map teleport | Open the map with **Tab**, hold **Ctrl**, then **right-click** the destination. |
 | Harvest with Rao's Edge | Use **Space** or **left-click** to pick berries, grass and twigs. |
 | Dig with Rao's Edge | **Right-click** to uproot plants. Tree stumps can also be dug with **Space**. |
 
-Heat vision and flight keys can be changed in the mod settings. Map teleport uses a keyboard and mouse; normal controller map controls remain available.
+Heat vision, frost breath and flight keys can be changed in the mod settings. These abilities and map teleport require no equipment. Map teleport uses a keyboard and mouse; normal controller map controls remain available.
 
 ## Character abilities
 
@@ -51,6 +52,19 @@ Heat vision is an innate ability. Aim with the mouse and press **R**, whether em
 - Surviving targets that can burn and are not fire-immune may catch fire. The game's normal fire spread still applies.
 
 The shortcut is inactive while chatting, interacting with interfaces or placing buildings. Heat vision cannot fire while busy, working, dead, a ghost, or while the server is paused.
+
+## Frost breath
+
+Aim with the mouse and press **X** to release blue-white cold mist and ice crystals from the mouth. This innate ability needs no equipment and consumes no hunger, sanity, materials or durability.
+
+- A forward cone with a **range of 8** and a **28° half-angle**. Each cast lasts about **1 second**; the minimum cast interval is **1.2 seconds**.
+- Applies the game's native freezing mechanics to enemies, adding **2 coldness once per target per cast**. It causes no direct health damage.
+- Whether a target freezes, and for how long, follows native resistance, freeze immunity and boss diminishing returns. It does not force every target to freeze or promise a fixed duration.
+- Freezing skips players, followers, companions, domesticated creatures, walls and structures. The breath can still extinguish burning or smoldering friends, structures and trees.
+- Campfires, cooking facilities and fueled devices are preserved so intentional fire sources keep working.
+- The server can disable the ability. Each player can select **X, C, N**, or disable the shortcut. Chat, interfaces, building placement, busy, mounted, dead, ghost and paused states prevent casting.
+
+Casting temporarily uses the supplied open-mouth front or profile head, with mist following the mouth. The back view retains the existing head. The normal expression returns when the cast ends or is interrupted, while body and equipment animations continue to use the installed game.
 
 ## Rao's Edge
 
@@ -93,7 +107,19 @@ Return to safe land or a boat before turning flight off. Landing over open water
 
 Destinations outside the map, in cave voids, occupied by buildings or entrances, or blocked by native special barriers are rejected. Ocean destinations are allowed while flying; with flight off, select safe land or a boat. Success and failure messages explain the result. Busy, mounted, dead, ghost and server-paused states prevent teleportation. Normal map dragging, zooming, right-clicking and closing remain available.
 
-Hovering and flight movement use the supplied front, side and back artwork. Flight loops show an empty-handed pose without held items or hats; attacks, harvesting and heat vision restore the normal character animations and equipment display. Equipped items continue to provide their effects. Airborne movement uses gentle wind instead of walking footsteps, hovering is quiet, and normal ground and mount sounds resume when appropriate.
+Hovering and flight movement use the supplied front, side and back artwork. Flight loops show an empty-handed pose without held items or hats; attacks, harvesting, heat vision and frost breath restore the normal character animations and equipment display. Equipped items continue to provide their effects. Airborne movement uses gentle wind instead of walking footsteps, hovering is quiet, and normal ground and mount sounds resume when appropriate.
+
+## Ability status HUD
+
+A compact panel appears in the **upper-right corner, below the health, hunger, sanity and moisture displays**, only for Superman. It shows three rows:
+
+- **Flight**: blue when enabled; gray when disabled, suspended by riding or unavailable.
+- **Amulet**: green while dry and safe-temperature protection is active; gray when not equipped or inactive.
+- **Revive**: green when ready, or a cooldown such as `04:35`. An unequipped amulet is never presented as ready.
+
+Dryness and temperature protection remain active during revival cooldown, and cooldown continues even after removing the amulet. The server synchronizes status and remaining time every simulation second; the timer stops while the simulation is paused. Hover over a row for details.
+
+Each row has its own cape, star shield or revival-arrow icon, dimmed when inactive; status text and cooldown remain visible. Each player can hide the panel, choose **80%, 100% or 120%** size, and switch between **default, shifted left or shifted down** positions in mod configuration.
 
 ## Configuration
 
@@ -104,12 +130,17 @@ Hovering and flight movement use the supplied front, side and back artwork. Flig
 | Axe damage | 2,000, 10,000, 50,000 | 2,000 |
 | Heat vision damage | 2,000, 10,000, 50,000 | 2,000 |
 | Heat vision key | R, G, Z, Disabled | R |
+| Frost breath ability (server) | Enabled, Disabled | Enabled |
+| Frost breath key | X, C, N, Disable key | X |
 | Flight ability (server) | Enabled, Disabled | Enabled |
 | Flight toggle key | V, B, Disable key | V |
 | Map teleport ability (server) | Enabled, Disabled | Enabled |
 | Map teleport input | Ctrl + right-click, Disabled | Ctrl + right-click |
+| Ability status HUD | Show, Hide | Show |
+| Ability HUD size | 80%, 100%, 120% | 100% |
+| Ability HUD position | Default, Shift left, Shift down | Default |
 
-Each player sets their own heat vision key, flight toggle key and map teleport input in their mod configuration. The Starcore Amulet revival cooldown is fixed at one game day.
+There are **14 settings**. Each player configures their own heat vision, frost breath and flight keys, map teleport input, and HUD visibility, size and position. The Starcore Amulet revival cooldown is fixed at one game day.
 
 ## Development
 

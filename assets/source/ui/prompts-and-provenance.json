@@ -1,0 +1,63 @@
+{
+  "mode": "built-in image_gen; no fallback API/CLI",
+  "status": "Integrated source artwork; runtime textures are compiled from these unchanged pixels.",
+  "prompts": [
+    {
+      "id": "flight",
+      "prompt": "Create ONE finished small raster game HUD icon for Krypton Survivor, a Superman character mod for Don't Starve Together. Style: hand-inked 2D dark fairy-tale survival-game illustration, slightly irregular heavy charcoal-black outline, restrained flat colors, a little internal crosshatching. Must read clearly at 30 by 30 pixels. A single compact centered symbol, occupying roughly 75 percent of a square canvas with generous transparent padding. Genuine transparent alpha background. No text, letters, numbers, labels, watermark, panel, grid, checkerboard, surrounding scenery, full character, face, or UI screenshot. Avoid photorealism, 3D render, excessive tiny details, and giant glow. Crisp silhouette and coherent hand-drawn game icon style. Subject: a small deep-red superhero cape sweeping upward, accompanied by one clear pale-cyan wind curl that conveys airborne movement. The cape is the main silhouette, with a simple folded shape and two pointed trailing corners; no person or body inside it. Blue and red accents, warm off-white highlights. This is the flight status icon."
+    },
+    {
+      "id": "protection",
+      "prompt": "Create ONE finished small raster game HUD icon for Krypton Survivor, a Superman character mod for Don't Starve Together. Style: hand-inked 2D dark fairy-tale survival-game illustration, slightly irregular heavy charcoal-black outline, restrained flat colors, a little internal crosshatching. Must read clearly at 30 by 30 pixels. A single compact centered symbol, occupying roughly 75 percent of a square canvas with generous transparent padding. Genuine transparent alpha background. No text, letters, numbers, labels, watermark, panel, grid, checkerboard, surrounding scenery, full character, face, or UI screenshot. Avoid photorealism, 3D render, excessive tiny details, and giant glow. Crisp silhouette and coherent hand-drawn game icon style. Subject: a small protective shield with a muted turquoise outer face and a single bright amber-gold four-point star energy core in its center. Strong uncomplicated shield outline, clearly communicates magical environmental protection. No necklace chain, armor, character, or multiple separate objects. This is the Starcore Amulet protection status icon."
+    },
+    {
+      "id": "revival",
+      "prompt": "Create ONE finished small raster game HUD icon for Krypton Survivor, a Superman character mod for Don't Starve Together. Style: hand-inked 2D dark fairy-tale survival-game illustration, slightly irregular heavy charcoal-black outline, restrained flat colors, a little internal crosshatching. Must read clearly at 30 by 30 pixels. A single compact centered symbol, occupying roughly 75 percent of a square canvas with generous transparent padding. Genuine transparent alpha background. No text, letters, numbers, labels, watermark, panel, grid, checkerboard, surrounding scenery, full character, face, or UI screenshot. Avoid photorealism, 3D render, excessive tiny details, and giant glow. Crisp silhouette and coherent hand-drawn game icon style. Subject: one thick moss-to-jade green circular returning arrow, with a clear arrowhead and a small warm-gold rebirth spark in its center. A clean near-complete circular silhouette communicating revival and recovery, with dark ink edging. Do not make a clock dial or loading spinner. This is the automatic revival readiness/cooldown status icon."
+    }
+  ],
+  "assets": {
+    "flight": {
+      "path": "assets/source/ui/flight.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "transparent_pixels": 1033254,
+      "sha256": "8b4370c94436be85e38c917844df9c82fa6f274d3976559ef9c40a4bc0b9fb66",
+      "generation_output": "build/ui-icon-drafts/v1/flight.png"
+    },
+    "protection": {
+      "path": "assets/source/ui/protection.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "transparent_pixels": 1059547,
+      "sha256": "c0bd944976fbfc980547e135669e62b54d753e2cfcd3b11922d6850662eb2613",
+      "generation_output": "build/ui-icon-drafts/v1/protection.png"
+    },
+    "revival": {
+      "path": "assets/source/ui/revival.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "alpha_extrema": [
+        0,
+        255
+      ],
+      "transparent_pixels": 1077921,
+      "sha256": "30d76aaa845ab3f52e18dc22f446056fbb0480b70d508d4c42b33c3ffabd0293",
+      "generation_output": "build/ui-icon-drafts/v1/revival.png"
+    }
+  },
+  "processing": "Alpha-bound crop, aspect-preserving resize and KTEX packaging only; no procedural illustration."
+}

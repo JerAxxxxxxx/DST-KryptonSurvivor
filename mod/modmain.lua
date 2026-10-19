@@ -20,6 +20,13 @@ G.TUNING.KRYPTON_SURVIVOR = {
     heatvision_range = 20,
     heatvision_width = 0.8,
     heatvision_interval = 0.35,
+    frostbreath_enabled = GetModConfigData("frostbreath_enabled") ~= false,
+    frostbreath_range = 8,
+    frostbreath_half_angle = 28,
+    frostbreath_duration = 1,
+    frostbreath_interval = 1.2,
+    frostbreath_coldness = 2,
+    frostbreath_freezetime = 4,
     flight_enabled = GetModConfigData("flight_enabled") ~= false,
     flight_toggle_interval = 0.35,
     map_teleport_enabled = GetModConfigData("map_teleport_enabled") ~= false,
@@ -27,7 +34,7 @@ G.TUNING.KRYPTON_SURVIVOR = {
     starcore_revive_cooldown = G.TUNING.TOTAL_DAY_TIME,
 }
 
-PrefabFiles = { "krypton_survivor", "krypton_staff", "krypton_heatvision_fx", "krypton_starcore_amulet" }
+PrefabFiles = { "krypton_survivor", "krypton_staff", "krypton_heatvision_fx", "krypton_starcore_amulet", "krypton_frostbreath_fx" }
 Assets = {
     Asset("ANIM", "anim/krypton_survivor.zip"),
     Asset("ANIM", "anim/ghost_wilson_build.zip"),
@@ -49,6 +56,12 @@ Assets = {
     Asset("IMAGE", "images/names_krypton_survivor.tex"),
     Asset("ATLAS", "images/names_gold_krypton_survivor.xml"),
     Asset("IMAGE", "images/names_gold_krypton_survivor.tex"),
+    Asset("ATLAS", "images/abilityicons/krypton_flight.xml"),
+    Asset("IMAGE", "images/abilityicons/krypton_flight.tex"),
+    Asset("ATLAS", "images/abilityicons/krypton_protection.xml"),
+    Asset("IMAGE", "images/abilityicons/krypton_protection.tex"),
+    Asset("ATLAS", "images/abilityicons/krypton_revival.xml"),
+    Asset("IMAGE", "images/abilityicons/krypton_revival.tex"),
     Asset("ATLAS", "images/inventoryimages/krypton_starcore_amulet.xml"),
     Asset("IMAGE", "images/inventoryimages/krypton_starcore_amulet.tex"),
 }
@@ -73,8 +86,8 @@ S.KRYPTON_STARCORE = zh and {
 S.CHARACTER_TITLES.krypton_survivor = zh and "超人 · 氪星幸存者" or "Superman · Krypton Survivor"
 S.CHARACTER_NAMES.krypton_survivor = S.NAMES.KRYPTON_SURVIVOR
 S.CHARACTER_DESCRIPTIONS.krypton_survivor = zh
-    and "*超高属性、完整夜视、白天恢复\n*热视线 R，飞行切换 V（按键可配置）\n*Ctrl＋地图右键瞬移\n*拉奥之锋：范围攻击与采集"
-    or "*Superpowered stats, night vision and daytime recovery\n*Heat vision R; flight toggle V (keys configurable)\n*Ctrl + right-click the map to teleport\n*Rao's Edge: area attacks and harvesting"
+    and "*超高属性、完整夜视、白天恢复\n*热视线 R，冰冻吐息 X，飞行 V（按键可配置）\n*Ctrl＋地图右键瞬移\n*拉奥之锋：范围攻击与采集"
+    or "*Superpowered stats, night vision and daytime recovery\n*Heat vision R; frost breath X; flight V (keys configurable)\n*Ctrl + right-click the map to teleport\n*Rao's Edge: area attacks and harvesting"
 S.CHARACTER_QUOTES.krypton_survivor = zh and '"希望，也能照亮这片荒野。"' or '"Hope can light this wilderness."'
 S.CHARACTER_SURVIVABILITY.krypton_survivor = zh and "超能力体验" or "Superpowered"
 S.SKIN_NAMES.krypton_survivor_none = S.NAMES.KRYPTON_SURVIVOR
@@ -115,11 +128,13 @@ end)
 AddModCharacter("krypton_survivor", "MALE")
 
 local HeatVision = require("krypton_heatvision")
+local FrostBreath = require("krypton_frostbreath")
 local Flight = require("krypton_flight")
 local MapTeleport = require("krypton_map_teleport")
 -- A stable namespace works for both local and Workshop folder names.
 local rpc_namespace = "KryptonSurvivor"
 AddModRPCHandler(rpc_namespace, "HeatVision", HeatVision.Cast)
+AddModRPCHandler(rpc_namespace, "FrostBreath", FrostBreath.Cast)
 local ability_messages = zh and {
     flight_on = "飞行已开启。",
     flight_off = "已经着陆。",
@@ -176,6 +191,12 @@ local heatvision_key = key_name ~= "disabled" and (heatvision_keys[key_name] or 
 require("krypton_heatvision_input")(G, heatvision_key, function(x, z)
     SendModRPCToServer(GetModRPC(rpc_namespace, "HeatVision"), x, z)
 end)
+local frost_key_name = GetModConfigData("frostbreath_key", true) or "KEY_X"
+local frost_keys = { KEY_X = G.KEY_X, KEY_C = G.KEY_C, KEY_N = G.KEY_N }
+local frost_key = frost_key_name ~= "disabled" and (frost_keys[frost_key_name] or G.KEY_X) or nil
+require("krypton_frostbreath_input")(G, frost_key, function(x, z)
+    SendModRPCToServer(GetModRPC(rpc_namespace, "FrostBreath"), x, z)
+end)
 local flight_key_name = GetModConfigData("flight_key", true) or "KEY_V"
 local flight_keys = { KEY_V = G.KEY_V, KEY_B = G.KEY_B }
 local flight_key = flight_key_name ~= "disabled" and (flight_keys[flight_key_name] or G.KEY_V) or nil
@@ -186,4 +207,11 @@ local map_mode = GetModConfigData("map_teleport_input", true) or "ctrl_right"
 AddClassPostConstruct("screens/mapscreen", require("krypton_map_teleport_input")(G, map_mode, function(x, z)
     SendModRPCToServer(GetModRPC(rpc_namespace, "MapTeleport"), x, z)
 end))
-print("[Krypton Survivor] Registered krypton_survivor; version 0.7.2")
+require("krypton_ability_hud").Install(G, {
+    enabled = GetModConfigData("status_hud_enabled", true) ~= false,
+    scale = GetModConfigData("status_hud_scale", true) or 1,
+    position = GetModConfigData("status_hud_position", true) or "default",
+    language = language,
+    add_class_post_construct = AddClassPostConstruct,
+})
+print("[Krypton Survivor] Registered krypton_survivor; version 0.8.2")

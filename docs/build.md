@@ -2,6 +2,8 @@
 
 仓库中的 `mod/` 已包含编译资源，可直接安装。修改 Lua 只需 Node.js；重新处理图片和生成预览还需要 Python 与本机安装的《饥荒联机版》。
 
+当前版本为 **0.8.2，已发布至 Steam 创意工坊**。本轮增加能力状态面板、冰冻吐息及其张嘴表情和图标，并修正侧面头部符号的帧覆盖。
+
 ## 环境
 
 验证环境为 Python 3.13.1、Node.js 24.12.0、Pillow 11.0.0、NumPy 2.4.3、OpenCV 4.13.0。Python 依赖固定在 `requirements.txt`，Node.js 依赖固定在 `package-lock.json`。
@@ -23,7 +25,7 @@ python -m pip install -r requirements.txt
 
 ## 重建资源
 
-使用原图保存在 `assets/source/`，原始文件名与来源见 [素材说明](../assets/README.md)。选区、关节位置和眼部坐标保存在 `assets/slices.json`。调整选区或位置后，依次运行：
+使用原图保存在 `assets/source/`，原始文件名与来源见 [素材说明](../assets/README.md)。选区、关节位置以及眼部和嘴部坐标保存在 `assets/slices.json`。调整选区或位置后，依次运行：
 
 ```powershell
 python tools/extract_user_art.py
@@ -31,6 +33,8 @@ python tools/build_custom_assets.py --game-dir "你的饥荒联机版安装目�
 python tools/build_flight_assets.py
 python tools/build_eating_assets.py --game-dir "你的饥荒联机版安装目录"
 python tools/build_starcore_assets.py --game-dir "你的饥荒联机版安装目录"
+python tools/build_frostbreath_head_assets.py
+python tools/build_ability_ui_assets.py
 python tools/preview_animation.py --game-dir "你的饥荒联机版安装目录"
 python tools/check_assets.py
 npm run check
@@ -102,9 +106,48 @@ python tools/preview_heatvision.py --game-dir "你的饥荒联机版安装目录
 
 该工具在内存中读取编译人物与本机游戏特效，输出 `build/previews/heatvision-eyes.png`、`heatvision-eyes.json`，以及站立和跑步各方向的连续与逐帧预览。预览用于核对已有像素、动画变换和光束边界；实际摄像机投影、客户端视角与完整光晕效果应在游戏中检查。
 
+## 能力状态面板
+
+`krypton_ability_status.lua` 在角色的 CommonInit 中、`SetPristine` 之前声明同一套网络变量；服务器在飞行与星核护符组件建立后启动状态同步。数据由服务器读取真实飞行、骑乘、生存、装备、保护和复活冷却状态，每个模拟秒更新，不修改既有护符保护或存档逻辑。
+
+`krypton_ability_hud.lua` 挂接原生 `widgets/controls`，仅为超人建立 `widgets/krypton_ability_status.lua` 面板。面板位于原生 `topright_root` 下，继承玩家 HUD 缩放，默认让出生命、饥饿、理智与湿度表。三行分别显示飞行、护符保护和复活；倒计时直接显示服务器剩余秒数，客户端不使用现实时间推算。
+
+面板复用原版 `images/global.xml` 背景；三行图标来自 `assets/source/ui/`，选区和位置见 `assets/slices.json` 的 `hud_icons`。运行 `python tools/build_ability_ui_assets.py` 可生成三份 128×128 透明图集和完整 mip 层，以及 `build/previews/ability-icons-compiled.png`、`ability-status-ui-composition.png`。后者用于核对中英文就绪、冷却、未装备的文字与图标布局，不是真实游戏截图。
+
+`status_hud_enabled`、`status_hud_scale` 和 `status_hud_position` 为每位玩家独立设置，支持显示／隐藏、0.8／1／1.2 倍，以及 `default`／`left`／`lower` 三个固定位置。悬停说明使用原生 tooltip；没有自由拖动、按钮或额外快捷键。
+
+`tests/status_hud.lua` 验证服务器与远程快照、暂停不倒数、装备与冷却变化、死亡与重进、非超人和专用服务器无 UI，以及本地配置与控制事件。屏幕分辨率、其他 HUD Mod 和实际联机布局仍需游戏试玩。
+
+## 冰冻吐息与嘴部定位
+
+`krypton_frostbreath.lua` 由服务器校验施法资格与鼠标方向，对前方范围 8、半角 28° 的扇形持续约 1 秒检查目标，最短间隔 1.2 秒。同一次吐息对每个目标最多调用一次原生 `freezable:AddColdness(2, 4)`；其中的参数 4 交由原生冻结系统处理，不代表所有目标统一冻结 4 秒。原版抗性、免冻、冷量重定向与 Boss 递减仍生效，不直接调用强制冻结或增加生命伤害。
+
+冻结筛选跳过友方与结构；灭火使用独立筛选，允许救助着火的玩家、随从、建筑和树木，同时排除 `campfire`、`cooker` 与具有 `fueled` 组件的设备。能力和按键分别由服务器 `frostbreath_enabled` 与客户端 `frostbreath_key` 配置，默认 X，可选 C、N 或关闭。无需装备与资源。
+
+常态嘴部源坐标保存在 `assets/slices.json` 的 `frostbreath.mouth_points`，构建生成 `krypton_frostbreath_visual_data.lua`。0.8.1 另从用户 `head.jpg` 的原样副本提取正面与侧面张嘴头部，选区、颈部锚点、等比缩放和嘴部坐标见 `breath_head` 段。运行时先切换表情，再从当前头部读取嘴部位置发射本机原版冷气和冰晶，结束或中断后恢复；背面保留原头。
+
+```powershell
+python tools/build_frostbreath_head_assets.py
+python tools/preview_frostbreath_heads.py --game-dir "你的饥荒联机版安装目录"
+```
+
+新头部编译包只含自有 `build.bin` 与 `atlas-0.tex`；`krypton_frostbreath_head_data.lua` 同步输出嘴部定位。透明切片保存在 `build/art/frostbreath/`，来源记录在 `build/frostbreath-head-extraction-manifest.json`。`build/previews/frostbreath-head-comparison.png` 与四方向站立／跑步切换 GIF 从编译包重新读取像素，在内存中合成本机身体动画，用于检查颈部、镜像与恢复。原图及其他人物／武器资源不重画。
+
+原生 `OverrideSymbol` 保留动作请求的帧号。头部与帽子头部在正面／侧面／背面分别读取 0／1／2，部分炎热和困倦侧面动作也会读取 0。`breath_head.native_head_frames` 声明完整范围；每个吐息符号用起始帧 0、持续 3 帧的同一图片覆盖，不复制或重画像素。资源检查逐帧验证覆盖，预览按原生动画实际帧及持续区间查找，缺失时直接失败；固定读取第 0 帧不能代替此检查。
+
+```powershell
+python tools/preview_frostbreath.py --game-dir "你的饥荒联机版安装目录"
+```
+
+该工具从编译后的角色包和本机原版站立／跑步动作读取像素与矩阵，在内存中合成原版冰晶，输出 `build/previews/frostbreath-mouths.png`、`frostbreath-mouths.json`，以及 `frostbreath-idle_loop-*.gif`、`frostbreath-run_loop-*.gif`。预览包括正面、左右侧面和背面；嘴部标记与放大框仅用于核对坐标。
+
+**这是编译像素与几何示意，不是真实游戏画面。** 工具读取原版冷气纹理和粒子参数用于核验，但不模拟 GPU 冷雾、泛光、深度排序或游戏摄像机投影。应在游戏中确认实际发射位置、雾效与遮挡。原生源码、动画和贴图仅从用户安装目录读取，不写出或随 Mod 分发。
+
 ## 检查
 
 修改 Lua 后运行 `npm run check`。检查覆盖 Lua 5.1 语法、资源引用、语言、选人模型、角色属性、装备、联机分支、采集、所有权、范围伤害、夜视与热视线，以及飞行碰撞、存档、预测、视觉和地图瞬移的落点、权限、暂停恢复与输入焦点。工具操作回归覆盖原生工作优先于采集的情形、连续空格采集、已采完植物保护、服务器指定目标验证、右键挖掘及原有工具动作。GitHub Actions 在推送和拉取请求时执行同一套检查，无需安装游戏。
+
+0.8.0 新增状态面板与冰冻吐息的独立回归，覆盖权威状态／冷却同步、本地 UI 配置，以及吐息扇形边界、目标筛选、单次冷量、灭火、输入拦截、冷却和生命周期清理。自动检查结果不等同于真实游戏效果已确认。
 
 星核护符检查覆盖真实参数顺序、安全体温与原生同步、温度伤害入口、后置回调覆盖、装备立即纠正、卸下恢复与原生复活／冷却。可选本机审计直接读取自己安装的温度、生命、装备和客户端温度同步函数，原生源码仅在内存使用，CI默认无需安装游戏：
 
@@ -114,7 +157,7 @@ python tools/audit_starcore_native.py --scripts-zip "D:\SteamLibrary\steamapps\c
 
 重建图片后运行 `python tools/check_assets.py`，核对编译帧、BILD 符号表的排序与哈希、贴图 mip 层、图集引用与可用的原图哈希，并检查生成的动作预览。
 
-游戏内验证可从新建世界和已有存档分别开始：启用服务器 Mod、选择超人，检查开局装备、采集、夜视、白天回血、热视线，以及飞行跨海与洞穴断层、安全着陆、地图瞬移和成功／失败提示；再检查戴帽、骑乘、洞穴切换、摄像机转向、保存读取与远程玩家加入。自动检查和几何预览不能替代这些游戏操作。
+游戏内验证可从新建世界和已有存档分别开始：启用服务器 Mod、选择超人，检查开局装备、采集、夜视、白天回血、热视线，以及飞行跨海与洞穴断层、安全着陆、地图瞬移和成功／失败提示；再检查冰冻吐息的嘴部起点、冻结／免冻、友方灭火、营火保留，状态面板的位置／缩放／装备状态／复活倒计时，以及戴帽、骑乘、洞穴切换、摄像机转向、保存读取、暂停与远程玩家加入。自动检查和几何预览不能替代这些游戏操作。
 
 ## 打包与安装
 

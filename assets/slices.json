@@ -1,6 +1,7 @@
 {
   "coordinate_system": "Selections use 1024x341 coordinates; mapped to each full-resolution original before slicing.",
   "sources": {
+    "breath_head": {"path":"assets/source/superman-frostbreath-head.jpg","tolerance":30,"reference_size":[1376,768]},
     "motion": {"path":"assets/source/superman-motion.jpg","tolerance":22},
     "standing": {"path":"assets/source/superman-standing.jpg","tolerance":27},
     "weapon": {"path":"assets/source/raos-edge.png","tolerance":45},
@@ -82,6 +83,8 @@
     }
   },
   "selections": {
+    "breath-head-front": {"source":"breath_head","reference_size":[1376,768],"polygon":[[60,0],[600,0],[600,745],[60,745]],"largest_component":true},
+    "breath-head-side": {"source":"breath_head","reference_size":[1376,768],"polygon":[[725,15],[1330,15],[1330,730],[725,730]],"largest_component":true},
     "starcore-core":{"source":"weapon","polygon":[[514,178.826],[521,185.481],[534,190.813],[548,195.476],[554,200.798],[549,206.465],[537,211.793],[521,215.46],[506,212.794],[498,209.458],[491,204.801],[485,201.797],[481,197.807],[490,192.479],[502,185.814]],"largest_component":true},
     "eating-open":{"source":"eating","polygon":[[30,8],[242,8],[242,305],[30,305]]},
     "eating-chew":{"source":"eating","polygon":[[398,8],[613,8],[613,305],[398,305]]},
@@ -108,5 +111,101 @@
     "foot":{"source":"standing","polygon":[[163,298],[172,299],[172,314],[154,319],[150,315],[159,307],[162,305]]},
     "pelvis":{"source":"standing","polygon":[[157,269],[186,269],[187,281],[177,288],[171,283],[160,291],[155,284]]},
     "portrait":{"source":"motion","polygon":[[85,35],[260,35],[260,335],[85,335]],"largest_component":false}
+  },
+  "frostbreath": {
+    "mouth_points": {
+      "front": {
+        "source_point": [
+          181,
+          197
+        ]
+      },
+      "side": {
+        "source_point": [
+          564,
+          191
+        ]
+      },
+      "back": {
+        "inherit": "front"
+      }
+    },
+    "pixels_per_unit": 150
+  },
+  "breath_head": {
+    "build": "krypton_frostbreath_head_build",
+    "archive": "anim/krypton_frostbreath_head.zip",
+    "atlas_size": 512,
+    "poses": [
+      {
+        "pose": "front",
+        "selection": "breath-head-front",
+        "symbol": "krypton_breath_front",
+        "anchor": [
+          339,
+          717
+        ],
+        "local_anchor": [
+          -2,
+          21
+        ],
+        "scale": 0.28,
+        "mouth_point": [
+          348,
+          581
+        ]
+      },
+      {
+        "pose": "side",
+        "selection": "breath-head-side",
+        "symbol": "krypton_breath_side",
+        "anchor": [
+          1190,
+          694
+        ],
+        "local_anchor": [
+          11.4,
+          21.2
+        ],
+        "scale": 0.305,
+        "mouth_point": [
+          1250,
+          553
+        ]
+      }
+    ],
+    "native_head_frames": [
+      0,
+      1,
+      2
+    ]
+  },
+  "hud_icons": {
+    "size": [
+      128,
+      128
+    ],
+    "fit_size": [
+      112,
+      112
+    ],
+    "center": [
+      64,
+      64
+    ],
+    "icons": {
+      "flight": {
+        "source": "assets/source/ui/flight.png",
+        "element": "krypton_flight.tex"
+      },
+      "protection": {
+        "source": "assets/source/ui/protection.png",
+        "element": "krypton_protection.tex"
+      },
+      "revival": {
+        "source": "assets/source/ui/revival.png",
+        "element": "krypton_revival.tex"
+      }
+    }
   }
 }

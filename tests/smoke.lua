@@ -21,7 +21,7 @@ TUNING = { TOTAL_DAY_TIME = 480 }
 EQUIPSLOTS = { HANDS = "hands", BODY = "body" }
 LanguageTranslator = { defaultlang = "zh" }
 GLOBAL = { STRINGS = STRINGS, TUNING = TUNING, LanguageTranslator = LanguageTranslator, deepcopy = deepcopy,
-    KEY_R = 114, KEY_V = 118, TheNet = { IsDedicated = function() return true end },
+    KEY_R = 114, KEY_V = 118, KEY_X = 120, KEY_C = 99, KEY_N = 110, TheNet = { IsDedicated = function() return true end },
     TECH = { NONE = {} }, Ingredient = function(name, amount) return { type = name, amount = amount } end }
 TheNet = GLOBAL.TheNet
 package.preload["krypton_heatvision"] = function() return load_source("mod/scripts/krypton_heatvision.lua") end
@@ -35,10 +35,14 @@ package.preload["krypton_flight"] = function() return load_source("mod/scripts/k
 package.preload["krypton_flight_input"] = function() return load_source("mod/scripts/krypton_flight_input.lua") end
 package.preload["krypton_map_teleport"] = function() return load_source("mod/scripts/krypton_map_teleport.lua") end
 package.preload["krypton_map_teleport_input"] = function() return load_source("mod/scripts/krypton_map_teleport_input.lua") end
+package.preload["krypton_frostbreath"] = function() return load_source("mod/scripts/krypton_frostbreath.lua") end
+package.preload["krypton_frostbreath_input"] = function() return load_source("mod/scripts/krypton_frostbreath_input.lua") end
+package.preload["krypton_ability_status"] = function() return load_source("mod/scripts/krypton_ability_status.lua") end
+package.preload["krypton_ability_hud"] = function() return load_source("mod/scripts/krypton_ability_hud.lua") end
 package.preload["componentutil"] = function() return {} end
 local ability_rpcs = {}
 AddModRPCHandler = function(namespace, name, fn)
-    assert(namespace == "KryptonSurvivor" and (name == "HeatVision" or name == "ToggleFlight" or name == "MapTeleport"))
+    assert(namespace == "KryptonSurvivor" and (name == "HeatVision" or name == "FrostBreath" or name == "ToggleFlight" or name == "MapTeleport"))
     ability_rpcs[name] = fn
 end
 local config = {}
@@ -72,6 +76,8 @@ assert(recipe.ingredients[3].type == "redgem" and recipe.ingredients[3].amount =
 assert(STRINGS.CHARACTER_TITLES.krypton_survivor == "超人 · 氪星幸存者")
 assert(STRINGS.CHARACTERS.KRYPTON_SURVIVOR ~= STRINGS.CHARACTERS.GENERIC)
 assert(type(ability_rpcs.HeatVision) == "function" and TUNING.KRYPTON_SURVIVOR.heatvision_damage == 2000)
+assert(type(ability_rpcs.FrostBreath) == "function" and TUNING.KRYPTON_SURVIVOR.frostbreath_enabled == true)
+assert(TUNING.KRYPTON_SURVIVOR.frostbreath_range == 8 and TUNING.KRYPTON_SURVIVOR.frostbreath_duration == 1)
 assert(type(ability_rpcs.ToggleFlight) == "function" and type(ability_rpcs.MapTeleport) == "function")
 assert(type(map_hook) == "function" and TUNING.KRYPTON_SURVIVOR.flight_enabled == true)
 assert(TUNING.KRYPTON_SURVIVOR.map_teleport_enabled == true)
@@ -100,6 +106,11 @@ net_bool = function()
     return { state = false, value = function(self) return self.state end,
         set = function(self, value) self.state = value end }
 end
+local function net_uint()
+    return { state = 0, value = function(self) return self.state end,
+        set = function(self, value) assert(type(value) == "number"); self.state = value end }
+end
+net_byte, net_ushortint = net_uint, net_uint
 TheWorld = { ismastersim = true, state = { isday = true }, cave = false,
     Map = { IsInMapBounds = function() return true end,
         GetSize = function() return 100, 100 end,
@@ -124,7 +135,11 @@ local player = {
     AddTag = function(self, tag) self.tags[tag] = true end,
     AddComponent = function(self, name)
         assert(name == "krypton_starcore")
-        self.components[name] = { starter_granted = false }
+        self.components[name] = { starter_granted = false,
+            GetEquippedAmulet = function() return nil end,
+            IsProtected = function() return false end,
+            IsAutoReviving = function() return false end,
+            GetCooldownRemaining = function() return 0 end }
     end,
     RemoveTag = function(self, tag) self.tags[tag] = nil end,
     DoTaskInTime = function(self, delay, fn) self.visiontask = fn end,

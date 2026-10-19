@@ -26,7 +26,7 @@ for (const [,type,relative] of assets) if (type === 'ATLAS') {
 console.log(`UI asset references: ${assets.length} files passed.`);
 // Embed project files because Fengari does not expose desktop filesystem IO in Lua.
 const projectFiles = {};
-const testFiles = ['tests/smoke.lua', 'tests/heatvision.lua', 'tests/mobility.lua', 'tests/eating.lua', 'tests/tool_actions.lua', 'tests/starcore.lua'];
+const testFiles = ['tests/smoke.lua', 'tests/heatvision.lua', 'tests/mobility.lua', 'tests/eating.lua', 'tests/tool_actions.lua', 'tests/starcore.lua', 'tests/frostbreath.lua', 'tests/status_hud.lua'];
 for (const file of [...scripts,...fixtureFiles,...testFiles.map(file => path.join(root, file))]) {
   projectFiles[path.relative(root,file).replaceAll('\\','/')] = fs.readFileSync(file,'utf8');
 }
