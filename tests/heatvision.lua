@@ -3,6 +3,9 @@ local function load_source(path)
     assert(chunk, err)
     return chunk()
 end
+package.preload["krypton_combat_targets"] = function()
+    return load_source("mod/scripts/krypton_combat_targets.lua")
+end
 
 local function equal(actual, expected, message)
     assert(actual == expected, (message or "unexpected value") .. ": expected " .. tostring(expected) .. ", got " .. tostring(actual))
@@ -28,10 +31,13 @@ local now, query_count, spawned, query_targets = 10, 0, {}, {}
 GetTime = function() return now end
 
 local function entity(x, z)
-    local inst = { tags = {}, components = {}, valid = true, x = x or 0, z = z or 0 }
+    local inst = { tags = {}, components = {}, events = {}, valid = true, x = x or 0, z = z or 0 }
     inst.IsValid = function(self) return self.valid end
     inst.HasTag = function(self, tag) return self.tags[tag] == true end
     inst.GetPhysicsRadius = function(self, default) return self.radius or default end
+    inst.PushEvent = function(self, event)
+        table.insert(self.events, { event = event, nextcast = self._krypton_heatvision_nextcast })
+    end
     inst.Transform = { GetWorldPosition = function() return inst.x, 0, inst.z end }
     inst.components.health = { dead = false, IsDead = function(self) return self.dead end }
     inst.components.combat = { GetAttacked = function(self, attacker, damage, weapon, stimulus)
@@ -86,7 +92,10 @@ local function reject(inst, x, z, description)
     equal(HeatVision.Cast(inst, x, z), false, description)
     equal(query_count, count, description .. " must not query targets")
     equal(#spawned, fx_count, description .. " must not emit beams")
-    if inst ~= nil then equal(inst._krypton_heatvision_nextcast, nil, description .. " must not spend cooldown") end
+    if inst ~= nil then
+        equal(inst._krypton_heatvision_nextcast, nil, description .. " must not spend cooldown")
+        equal(#inst.events, 0, description .. " must not announce a successful cast")
+    end
 end
 reject(nil, 10, 0, "missing player")
 for _, input in ipairs({ "10", false, {}, math.huge, -math.huge, 0 / 0 }) do
@@ -175,11 +184,15 @@ equal(spawned[1].caster, caster, "shared cast identifies its animated caster")
 close(spawned[1].dx, 1, "shared cast direction x")
 close(spawned[1].dz, 0, "shared cast direction z")
 close(caster._krypton_heatvision_nextcast, 10.35, "server interval")
+equal(#caster.events, 1, "one status event after successful heat vision")
+equal(caster.events[1].event, "krypton_skillstatechanged", "shared skill feedback event")
+close(caster.events[1].nextcast, 10.35, "status sees complete cooldown before notification")
 local queries_after_cast = query_count
 now = 10.349
 equal(HeatVision.Cast(caster, 1000, 0), false, "rapid RPC repetition blocked")
 equal(caster.flight_suspensions, 1, "refused repeated cast does not prolong visual suspension")
 equal(query_count, queries_after_cast, "repeated RPC performs no query")
+equal(#caster.events, 1, "refused repeated cast does not emit a status event")
 query_targets = { distant }
 now = 10.35
 equal(HeatVision.Cast(caster, 1000, 0), true, "cast available at cooldown boundary")
@@ -196,6 +209,27 @@ local new_damage_target = entity(0, -4)
 query_targets = { new_damage_target }
 equal(HeatVision.Cast(player(), 0, -1), true, "negative direction supported")
 equal(new_damage_target.components.combat.damage, 50000, "cast reads current configured damage")
+
+-- The server ignition switch changes only ignition, not damage, geometry,
+-- effects or cooldown. Nil retains the behavior of existing configurations.
+TUNING.KRYPTON_SURVIVOR.heatvision_damage = 2000
+for _, mode in ipairs({ "missing", "on", "off" }) do
+    local expected_ignitions = 1
+    if mode == "missing" then TUNING.KRYPTON_SURVIVOR.heatvision_ignite = nil
+    elseif mode == "on" then TUNING.KRYPTON_SURVIVOR.heatvision_ignite = true
+    else TUNING.KRYPTON_SURVIVOR.heatvision_ignite, expected_ignitions = false, nil end
+    local victim, actor = entity(4, 0), player()
+    query_targets = { victim }
+    local old_effects = #spawned
+    equal(HeatVision.Cast(actor, 1, 0), true, "ignition mode " .. mode)
+    equal(victim.components.combat.hits, 1, "disabled ignition still damages once")
+    equal(victim.components.combat.damage, 2000, "ignition leaves configured damage intact")
+    equal(victim.components.combat.stimulus, "fire", "damage stimulus remains unchanged")
+    equal(victim.components.burnable.ignitions, expected_ignitions, "independent ignition switch")
+    equal(#spawned, old_effects + 1, "ignition leaves network FX intact")
+    close(actor._krypton_heatvision_nextcast, now + .35, "ignition leaves cooldown intact")
+end
+TUNING.KRYPTON_SURVIVOR.heatvision_ignite = nil
 
 local register_input = load_source("mod/scripts/krypton_heatvision_input.lua")
 local function input_fixture()

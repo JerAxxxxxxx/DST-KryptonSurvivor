@@ -1,11 +1,7 @@
 local FrostBreath = {}
+local Targets = require("krypton_combat_targets")
 
 local QUERY_EXCLUDES = { "INLIMBO", "FX" }
-local FREEZE_EXCLUDES = {
-    "INLIMBO", "player", "playerghost", "companion", "wall", "structure",
-    "FX", "notarget", "invisible", "player_aligned", "domesticated",
-}
-
 local function IsFinite(value)
     return type(value) == "number" and value == value and value > -math.huge and value < math.huge
 end
@@ -26,12 +22,9 @@ function FrostBreath.CanCast(player)
 end
 
 local function CanFreeze(player, target)
-    for _, tag in ipairs(FREEZE_EXCLUDES) do
-        if target:HasTag(tag) then return false end
-    end
-    return target ~= player and target.components.health ~= nil and not target.components.health:IsDead()
+    return target ~= player and not Targets.IsProtected(target)
+        and target.components.health ~= nil and not target.components.health:IsDead()
         and target.components.combat ~= nil and target.components.freezable ~= nil
-        and not (target.components.follower ~= nil and target.components.follower.leader ~= nil)
         and player.components.combat:CanTarget(target)
 end
 
@@ -64,9 +57,11 @@ local function Finish(player, channel)
     if channel.task ~= nil then channel.task:Cancel(); channel.task = nil end
     if channel.endtask ~= nil then channel.endtask:Cancel(); channel.endtask = nil end
     if channel.fx ~= nil and channel.fx:IsValid() then channel.fx:Remove() end
-    if player._krypton_frostbreath_channel == channel then player._krypton_frostbreath_channel = nil end
+    local current = player._krypton_frostbreath_channel == channel
+    if current then player._krypton_frostbreath_channel = nil end
     player:RemoveEventCallback("onremove", channel.stop)
     player:RemoveEventCallback("death", channel.stop)
+    if current and player:IsValid() then player:PushEvent("krypton_skillstatechanged") end
 end
 
 local function Pulse(player, channel)
@@ -134,6 +129,7 @@ function FrostBreath.Cast(player, aim_x, aim_z)
     player:ListenForEvent("death", channel.stop)
     channel.task = player:DoPeriodicTask(0.2, function() Pulse(player, channel) end)
     channel.endtask = player:DoTaskInTime(duration, channel.stop)
+    player:PushEvent("krypton_skillstatechanged")
     Pulse(player, channel)
     return true
 end

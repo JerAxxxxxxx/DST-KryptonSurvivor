@@ -1,3 +1,4 @@
+local Targets = require("krypton_combat_targets")
 local assets = {
     Asset("ANIM", "anim/cane.zip"),
     Asset("ANIM", "anim/krypton_staff_build.zip"),
@@ -9,12 +10,11 @@ local function OnAttack(inst, attacker, target)
     if target == nil or not target:IsValid() then return end
     local x, y, z = target.Transform:GetWorldPosition()
     local victims = TheSim:FindEntities(x, y, z, TUNING.KRYPTON_SURVIVOR.staff_aoe_radius,
-        { "_combat" }, { "INLIMBO", "player", "playerghost", "companion", "wall", "structure" })
+        { "_combat" }, Targets.EXCLUDE_TAGS)
     for _, victim in ipairs(victims) do
-        if victim ~= target and victim ~= attacker and victim:IsValid()
+        if victim ~= target and victim ~= attacker and victim:IsValid() and not Targets.IsProtected(victim)
             and victim.components.combat ~= nil and victim.components.health ~= nil
             and not victim.components.health:IsDead()
-            and (victim.components.follower == nil or victim.components.follower.leader == nil)
             and attacker.components.combat:CanTarget(victim) then
             victim.components.combat:GetAttacked(attacker, TUNING.KRYPTON_SURVIVOR.staff_damage, inst)
         end

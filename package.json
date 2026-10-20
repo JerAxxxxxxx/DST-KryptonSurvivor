@@ -1,10 +1,11 @@
 {
   "name": "krypton-survivor",
-  "version": "0.8.2",
+  "version": "0.9.0",
   "private": true,
   "description": "Don't Starve Together character mod",
   "scripts": {
     "check": "node tools/check-mod.cjs",
+    "check:assets": "python tools/check_assets.py && python tools/test_asset_validation.py",
     "assets": "python tools/extract_user_art.py && python tools/build_custom_assets.py && python tools/build_flight_assets.py && python tools/build_eating_assets.py && python tools/build_starcore_assets.py && python tools/build_frostbreath_head_assets.py && python tools/build_ability_ui_assets.py",
     "preview": "python tools/preview_animation.py"
   },

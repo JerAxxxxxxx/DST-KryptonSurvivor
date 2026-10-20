@@ -21,10 +21,12 @@ TUNING = { TOTAL_DAY_TIME = 480 }
 EQUIPSLOTS = { HANDS = "hands", BODY = "body" }
 LanguageTranslator = { defaultlang = "zh" }
 GLOBAL = { STRINGS = STRINGS, TUNING = TUNING, LanguageTranslator = LanguageTranslator, deepcopy = deepcopy,
-    KEY_R = 114, KEY_V = 118, KEY_X = 120, KEY_C = 99, KEY_N = 110, TheNet = { IsDedicated = function() return true end },
+    KEY_R = 114, KEY_G = 103, KEY_Z = 122, KEY_V = 118, KEY_X = 120, KEY_C = 99, KEY_N = 110,
+    TheNet = { IsDedicated = function() return true end, IsServerPaused = function() return false end },
     TECH = { NONE = {} }, Ingredient = function(name, amount) return { type = name, amount = amount } end }
 TheNet = GLOBAL.TheNet
 package.preload["krypton_heatvision"] = function() return load_source("mod/scripts/krypton_heatvision.lua") end
+package.preload["krypton_combat_targets"] = function() return load_source("mod/scripts/krypton_combat_targets.lua") end
 package.preload["krypton_heatvision_input"] = function() return load_source("mod/scripts/krypton_heatvision_input.lua") end
 package.preload["krypton_flight_visual"] = function() return load_source("mod/scripts/krypton_flight_visual.lua") end
 package.preload["krypton_eating_visual"] = function() return load_source("mod/scripts/krypton_eating_visual.lua") end
@@ -38,7 +40,16 @@ package.preload["krypton_map_teleport_input"] = function() return load_source("m
 package.preload["krypton_frostbreath"] = function() return load_source("mod/scripts/krypton_frostbreath.lua") end
 package.preload["krypton_frostbreath_input"] = function() return load_source("mod/scripts/krypton_frostbreath_input.lua") end
 package.preload["krypton_ability_status"] = function() return load_source("mod/scripts/krypton_ability_status.lua") end
-package.preload["krypton_ability_hud"] = function() return load_source("mod/scripts/krypton_ability_hud.lua") end
+local installed_hud_options
+package.preload["krypton_ability_hud"] = function()
+    local hud = load_source("mod/scripts/krypton_ability_hud.lua")
+    local install = hud.Install
+    hud.Install = function(g, options)
+        installed_hud_options = options
+        return install(g, options)
+    end
+    return hud
+end
 package.preload["componentutil"] = function() return {} end
 local ability_rpcs = {}
 AddModRPCHandler = function(namespace, name, fn)
@@ -76,6 +87,8 @@ assert(recipe.ingredients[3].type == "redgem" and recipe.ingredients[3].amount =
 assert(STRINGS.CHARACTER_TITLES.krypton_survivor == "超人 · 氪星幸存者")
 assert(STRINGS.CHARACTERS.KRYPTON_SURVIVOR ~= STRINGS.CHARACTERS.GENERIC)
 assert(type(ability_rpcs.HeatVision) == "function" and TUNING.KRYPTON_SURVIVOR.heatvision_damage == 2000)
+assert(TUNING.KRYPTON_SURVIVOR.heatvision_ignite == true, "Ignition keeps its existing default")
+assert(installed_hud_options.heatvision_key == "KEY_R" and installed_hud_options.frostbreath_key == "KEY_X")
 assert(type(ability_rpcs.FrostBreath) == "function" and TUNING.KRYPTON_SURVIVOR.frostbreath_enabled == true)
 assert(TUNING.KRYPTON_SURVIVOR.frostbreath_range == 8 and TUNING.KRYPTON_SURVIVOR.frostbreath_duration == 1)
 assert(type(ability_rpcs.ToggleFlight) == "function" and type(ability_rpcs.MapTeleport) == "function")
@@ -85,12 +98,24 @@ config.language = "en"
 config.staff_damage = 10000
 config.speed_multiplier = 2
 config.heatvision_damage = 50000
+config.heatvision_ignite = false
+config.heatvision_key, config.frostbreath_key = "KEY_G", "KEY_N"
 load_source("mod/modmain.lua")
 assert(STRINGS.NAMES.KRYPTON_SURVIVOR == "Superman")
 assert(STRINGS.NAMES.KRYPTON_STAFF == "Rao's Edge")
 assert(STRINGS.NAMES.KRYPTON_STARCORE_AMULET == "Starcore Amulet")
 assert(TUNING.KRYPTON_SURVIVOR.staff_damage == 10000 and TUNING.KRYPTON_SURVIVOR.speed == 2)
 assert(TUNING.KRYPTON_SURVIVOR.heatvision_damage == 50000)
+assert(TUNING.KRYPTON_SURVIVOR.heatvision_ignite == false, "Server config can disable ignition")
+assert(installed_hud_options.heatvision_key == "KEY_G" and installed_hud_options.frostbreath_key == "KEY_N",
+    "HUD receives the same configured keys as actual input handlers")
+config.heatvision_key, config.frostbreath_key = "disabled", "disabled"
+load_source("mod/modmain.lua")
+assert(installed_hud_options.heatvision_key == "disabled" and installed_hud_options.frostbreath_key == "disabled")
+config.heatvision_key, config.frostbreath_key = "unknown_key", "unknown_key"
+load_source("mod/modmain.lua")
+assert(installed_hud_options.heatvision_key == "KEY_R" and installed_hud_options.frostbreath_key == "KEY_X",
+    "Unknown saved keys show the same fallback as actual input handlers")
 
 local preview = { SetSkins = function(self, prefab, base) self.prefab, self.base = prefab, base end }
 puppet_hook(preview)
@@ -126,7 +151,7 @@ package.preload["prefabs/player_common"] = function()
 end
 load_source("mod/scripts/prefabs/krypton_survivor.lua")
 local player = {
-    GUID = 1, tags = { player = true },
+    GUID = 1, prefab = "krypton_survivor", tags = { player = true },
     components = {}, replica = {},
     MiniMapEntity = { SetIcon = function(self, value) self.icon = value end },
     AnimState = { SetBuild = function(self, value) self.build = value end,
@@ -146,6 +171,7 @@ local player = {
     DoPeriodicTask = function(self, period, fn) self.regentask = fn end,
     ListenForEvent = function(self, event, fn) self.activation = fn end,
     HasTag = function(self, tag) return self.tags[tag] == true end,
+    IsValid = function() return true end,
     Transform = { GetWorldPosition = function() return 0, 0, 0 end },
     GetCurrentPlatform = function() return nil end,
     Physics = { mask = 31,
@@ -299,7 +325,7 @@ local staff = staff_prefab.fn()
 assert(staff.components.weapon.damage == 10000)
 assert(staff.components.weapon.attackrange == 6 and staff.components.weapon.hitrange == 8)
 local function victim()
-    return { IsValid = function() return true end,
+    return { IsValid = function() return true end, HasTag = function() return false end,
         Transform = { GetWorldPosition = function() return 10, 0, 20 end },
         components = { health = { IsDead = function() return false end },
             combat = { GetAttacked = function(self, attacker, damage, weapon)

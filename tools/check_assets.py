@@ -1,17 +1,60 @@
-"""Validate compiled files and provenance without needing a running game."""
-from pathlib import Path
+"""Validate owned release assets with Pillow only; no installed game is needed."""
+from pathlib import Path, PurePosixPath
 import hashlib,json,struct,zipfile,re
 from PIL import Image
 import xml.etree.ElementTree as ET
 from klei_assets import read_anim,read_build,read_tex,crop_symbol,hash_name,validate_build_symbols
 from paths import ROOT,MOD
 
+# These names are deliberately loaded from the installed game at runtime. A
+# misspelled or missing project animation must not be accepted as a game asset.
+NATIVE_RUNTIME_ANIMATIONS={
+    'anim/amulets.zip', 'anim/bishop_attack.zip', 'anim/cane.zip',
+    'anim/deer_ice_flakes.zip', 'anim/ghost_wilson_build.zip',
+    'anim/wagdrone_laserwire_fx.zip',
+}
+OWNED_ANIMATION_ARCHIVES={
+    'anim/krypton_survivor.zip', 'anim/krypton_staff_build.zip',
+    'anim/krypton_flight.zip', 'anim/krypton_eating.zip',
+    'anim/krypton_frostbreath_head.zip', 'anim/krypton_starcore_build.zip',
+}
+
+
+def check_asset_references():
+    # Compare spellings as POSIX strings so Windows checks also catch filenames
+    # that would fail after a case-sensitive Linux checkout.
+    distributed={p.relative_to(MOD).as_posix() for p in MOD.rglob('*') if p.is_file()}
+    declarations=[]
+    pattern=r'''\bAsset\s*\(\s*["'](ANIM|ATLAS|IMAGE)["']\s*,\s*["']([^"']+)["']\s*\)'''
+    for path in MOD.rglob('*.lua'):
+        for kind,name in re.findall(pattern,path.read_text(encoding='utf8')):
+            relative=PurePosixPath(name)
+            assert not relative.is_absolute() and '..' not in relative.parts \
+                and relative.as_posix()==name,'Invalid asset path: '+name
+            assert relative.suffix=={'ANIM':'.zip','ATLAS':'.xml','IMAGE':'.tex'}[kind], \
+                'Unexpected asset extension: '+name
+            if name in NATIVE_RUNTIME_ANIMATIONS:
+                assert kind=='ANIM'
+                assert name not in distributed,'Native runtime asset must not be distributed: '+name
+            else:
+                assert name in distributed, \
+                    f'Missing declared local asset (case-sensitive): {name} in {path.relative_to(ROOT)}'
+            declarations.append((kind,name))
+    archives={name for name in distributed if name.startswith('anim/') and name.endswith('.zip')}
+    assert not archives-OWNED_ANIMATION_ARCHIVES, \
+        'Unexpected distributed animation archive: '+', '.join(sorted(archives-OWNED_ANIMATION_ARCHIVES))
+    assert OWNED_ANIMATION_ARCHIVES<=archives,'Missing owned animation archive'
+    return len(declarations)
+
+
 def check_texture(data):
+    assert len(data)>=8,'Texture header is truncated'
     assert data[:4]==b'KTEX'
     header=struct.unpack_from('<I',data,4)[0]
     assert (header>>4)&31==4,'Custom textures must use RGBA'
     count=(header>>13)&31
     assert count>0
+    assert len(data)>=8+count*10,'Texture mip table is truncated'
     rows=[struct.unpack_from('<HHHI',data,8+i*10) for i in range(count)]
     assert len(data)==8+count*10+sum(r[3] for r in rows),'Texture data is truncated'
     for i,(w,h,pitch,size) in enumerate(rows):
@@ -20,6 +63,7 @@ def check_texture(data):
     assert rows[-1][:2]==(1,1),'Missing mip levels'
     return read_tex(data)
 
+declarations=check_asset_references()
 total=0
 for archive,name,count in [('krypton_survivor.zip','krypton_survivor',132),
                             ('krypton_staff_build.zip','krypton_staff_build',3)]:
@@ -169,9 +213,17 @@ with zipfile.ZipFile(MOD/'anim/krypton_starcore_build.zip') as z:
 for p in MOD.rglob('*.tex'):check_texture(p.read_bytes())
 for p in MOD.rglob('*.xml'):
     atlas=ET.fromstring(p.read_text(encoding='utf8'))
-    texture=p.parent/atlas.find('Texture').attrib['filename']
-    assert texture.is_file(),p
-    for element in atlas.findall('./Elements/Element'):
+    texture_node=atlas.find('Texture')
+    assert atlas.tag=='Atlas' and texture_node is not None,'Invalid atlas: '+str(p)
+    filename=texture_node.attrib['filename']
+    assert PurePosixPath(filename).name==filename,'Atlas texture must be a local filename: '+str(p)
+    texture=p.parent/filename
+    siblings={entry.name for entry in p.parent.iterdir() if entry.is_file()}
+    assert filename in siblings and texture.is_file(),'Missing atlas texture: '+str(texture)
+    elements=atlas.findall('./Elements/Element')
+    names=[element.attrib['name'] for element in elements]
+    assert names and all(names) and len(names)==len(set(names)),'Invalid or duplicate atlas elements: '+str(p)
+    for element in elements:
         assert 0<=float(element.attrib['u1'])<float(element.attrib['u2'])<=1
         assert 0<=float(element.attrib['v1'])<float(element.attrib['v2'])<=1
 for manifest_path in [ROOT/'build/extraction-manifest.json',ROOT/'build/flight-extraction-manifest.json',
@@ -189,4 +241,4 @@ ui_manifest=ROOT/'build/ability-ui-extraction-manifest.json'
 if ui_manifest.exists():
     for item in json.loads(ui_manifest.read_text(encoding='utf8'))['icons'].values():
         assert hashlib.sha256((ROOT/item['source']).read_bytes()).hexdigest()==item['sha256']
-print(f'Validated {total} symbol frames, full texture mip chains, UI atlases and available source hashes.')
+print(f'Validated {total} symbol frames, {declarations} asset declarations, full texture mip chains, UI atlases and available source hashes.')

@@ -6,10 +6,19 @@ end
 local function equal(actual, expected, message)
     assert(actual == expected, (message or "unexpected value") .. ": expected " .. tostring(expected) .. ", got " .. tostring(actual))
 end
+local function close(actual, expected, message)
+    assert(math.abs(actual - expected) < .000001, message or "values differ")
+end
 local real_require = require
 local Flight = { IsFlying = function(inst) return inst.actual_flying end }
+-- Status consumes each ability's canonical eligibility; these opaque test
+-- answers let this suite prove that it never invents its own server policy.
+local HeatVision = { CanCast = function(inst) return inst.heat_can_cast ~= false and not inst.dead end }
+local FrostBreath = { CanCast = function(inst) return inst.frost_can_cast ~= false and not inst.dead end }
 require = function(name)
     if name == "krypton_flight" then return Flight end
+    if name == "krypton_heatvision" then return HeatVision end
+    if name == "krypton_frostbreath" then return FrostBreath end
     return real_require(name)
 end
 
@@ -34,7 +43,12 @@ local function player()
     function inst:HasTag(tag) return self.tags[tag] == true end
     function inst:ListenForEvent(event, fn) self.listeners[event] = fn end
     function inst:DoPeriodicTask(interval, fn) self.periodic[#self.periodic + 1] = { interval = interval, fn = fn }; return {} end
-    function inst:DoTaskInTime(delay, fn) self.deferred[#self.deferred + 1] = fn end
+    function inst:DoTaskInTime(delay, fn)
+        local task = { delay = delay, due = now + delay, fn = fn,
+            Cancel = function(self) self.cancelled = true end }
+        self.deferred[#self.deferred + 1] = task
+        return task
+    end
     inst.components.health = { IsDead = function() return inst.dead end }
     inst.components.rider = { IsRiding = function() return inst.riding end }
     inst.components.krypton_starcore = {
@@ -147,8 +161,93 @@ Status.CommonInit(loaded)
 pristine = true
 Status.MasterInit(loaded)
 loaded.cooldown_end = now + 480
-loaded.deferred[1]()
+loaded.deferred[1].fn(loaded)
 equal(Status.GetSnapshot(loaded).cooldown, 480)
+
+-- Successful casts notify the server immediately, and one-shot simulation
+-- tasks resolve sub-second cooldowns between the normal 1-second snapshots.
+now = 500
+local caster = player()
+pristine = false; Status.CommonInit(caster); pristine = true; Status.MasterInit(caster)
+local function skills(actor, language, keys, context)
+    return Status.GetSkillRows(Status.GetSnapshot(actor), language or "zh", keys, context)
+end
+local function run_due(actor)
+    local again = true
+    while again do
+        again = false
+        for _, task in ipairs(actor.deferred) do
+            if not task.cancelled and not task.fired and task.due <= now then
+                task.fired = true; task.fn(actor); again = true
+            end
+        end
+    end
+end
+equal(skills(caster)[1].text, "热视线 [R]：就绪", "default heat key and authoritative ready")
+equal(skills(caster)[2].text, "吐息 [X]：就绪", "default frost key")
+local unchanged_sets = caster._krypton_status_flags.sets
+Status.Sync(caster)
+equal(caster._krypton_status_flags.sets, unchanged_sets, "unchanged server snapshots generate no status write")
+caster._krypton_heatvision_nextcast = now + .35
+caster.listeners.krypton_skillstatechanged()
+equal(skills(caster)[1].state, "cooldown", "cast event dims heat immediately")
+assert(skills(caster)[1].colour[4] < 1, "short cooldown dims instead of displaying decimals")
+close(caster._krypton_status_skill_task.delay, .35, "one-shot catches heat cooldown before periodic poll")
+local pending = caster._krypton_status_skill_task
+Status.Sync(caster)
+equal(caster._krypton_status_skill_task, pending, "same deadline is not rescheduled on unrelated status updates")
+now = 500.34; run_due(caster)
+equal(skills(caster)[1].state, "cooldown", "heat cannot become ready early")
+now = 500.35; run_due(caster)
+equal(skills(caster)[1].state, "ready", "heat ready returns at actual .35-second deadline")
+
+caster._krypton_frostbreath_channel = { ends = now + 1 }
+caster._krypton_frostbreath_nextcast = now + 1.2
+caster.listeners.krypton_skillstatechanged()
+equal(skills(caster)[2].state, "casting", "breath channel has a distinct casting state")
+caster._krypton_heatvision_nextcast = now + .35
+caster.listeners.krypton_skillstatechanged()
+close(caster._krypton_status_skill_task.delay, .35, "concurrent skills wake at earliest deadline")
+now = now + .35; run_due(caster)
+equal(skills(caster)[1].state, "ready", "heat can finish during a breath channel")
+equal(skills(caster)[2].state, "casting", "breath remains active until its own channel ends")
+now = 501.35; run_due(caster)
+equal(skills(caster)[2].state, "cooldown", "expired channel cannot remain casting before Finish callback")
+caster._krypton_frostbreath_channel = nil
+caster.listeners.krypton_skillstatechanged()
+now = 501.55; run_due(caster)
+equal(skills(caster)[2].state, "ready", "breath ready returns at 1.2-second deadline")
+equal(#caster.periodic, 1, "skill feedback does not add a high-frequency server poll")
+
+-- A remote viewer reads server bits; changing its local time cannot advance
+-- cooldown or modify replicated values, and local settings only narrow input.
+client._krypton_status_flags.data = caster._krypton_status_flags:value()
+client._krypton_status_cooldown.data = caster._krypton_status_cooldown:value()
+local configured = skills(client, "en", { heatvision_key = "KEY_Z", frostbreath_key = "KEY_N" })
+equal(configured[1].text, "Heat [Z]: Ready")
+equal(configured[2].text, "Frost [N]: Ready")
+local local_flags = client._krypton_status_flags:value()
+equal(skills(client, "zh", { heatvision_key = "disabled" })[1].state, "key_off")
+equal(skills(client, "zh", nil, { blocked = true })[1].state, "unavailable")
+equal(skills(client, "zh", nil, { frost_blocked = true })[1].state, "ready", "frost modifier/riding guard does not invent a heat restriction")
+equal(skills(client, "zh", nil, { frost_blocked = true })[2].state, "unavailable")
+equal(client._krypton_status_flags:value(), local_flags, "client guards never write server flags")
+caster.heat_can_cast = false; caster.frost_can_cast = false
+caster.listeners.newstate()
+equal(skills(caster)[1].state, "unavailable", "canonical heat denial cannot show ready")
+equal(skills(caster)[2].state, "unavailable", "canonical frost denial cannot show ready")
+caster.heat_can_cast = true; caster.frost_can_cast = true
+caster.listeners.newstate()
+equal(skills(caster)[1].state, "ready", "newstate immediately restores actual eligibility")
+TUNING.KRYPTON_SURVIVOR.frostbreath_enabled = false
+Status.Sync(caster)
+equal(skills(caster)[2].state, "server_off", "server setting wins over a locally enabled key")
+TUNING.KRYPTON_SURVIVOR.frostbreath_enabled = true
+caster._krypton_heatvision_nextcast = now + .35
+caster.listeners.krypton_skillstatechanged()
+local remove_task = caster._krypton_status_skill_task
+caster.listeners.onremove(caster)
+assert(remove_task.cancelled and caster._krypton_status_skill_task == nil, "removal cancels pending skill wake")
 
 Class = function(base, constructor)
     local class = {}; class.__index = class
@@ -175,6 +274,7 @@ function Widget:SetTooltip(value) self.tooltip = value end
 function Widget:SetString(value) self.text = value end
 function Widget:SetHAlign(value) self.align = value end
 function Widget:SetClickable(value) self.clickable = value end
+function Widget:StartUpdating() self.updating = true end
 local Text = Class(Widget, function(self, font, size, text)
     Widget._ctor(self, "Text"); self.font, self.font_size, self.text = font, size, text
 end)
@@ -195,7 +295,8 @@ AbilityStatus = load_source("mod/scripts/widgets/krypton_ability_status.lua")
 local widget = AbilityStatus(client, { language = "zh" })
 equal(widget.background.clickable, false, "background does not create a click target")
 equal(widget.background.size[1], 250, "preserve panel width")
-equal(widget.background.size[2], 132, "preserve panel height")
+equal(widget.background.size[2], 190, "expanded panel fits skill feedback")
+equal(widget.background.position[2] + widget.background.size[2] / 2, 66, "old panel top edge remains fixed")
 local icon_names = { "flight", "protection", "revival" }
 for i, name in ipairs(icon_names) do
     equal(widget.row_icons[i].atlas, "images/abilityicons/krypton_" .. name .. ".xml", "own row atlas")
@@ -212,6 +313,9 @@ end
 equal(widget.events[Status.DIRTY_EVENT].source, client, "widget tracks its owning player")
 equal(widget.rows[3].text, Status.GetRows(Status.GetSnapshot(client), "zh")[3].text)
 equal(widget:OnControl("map", true), false, "HUD claims no gameplay control")
+assert(widget.updating and #widget.skill_rows == 2, "only visible HUD starts local availability updates")
+equal(widget.skill_rows[1].region[1], 230, "skill row has no redundant picture or cramped icon column")
+equal(widget.skill_rows[2].position[2], -104, "skill rows fit below original rows")
 host.actual_flying, TUNING.KRYPTON_SURVIVOR.flight_enabled = true, true
 host.periodic[1].fn()
 replicate()
@@ -247,7 +351,11 @@ equal(english_widget:OnControl("attack", true), false, "icons consume no attack 
 local Hud = load_source("mod/scripts/krypton_ability_hud.lua")
 local hooks = {}
 local dedicated = false
-local G = { TheNet = { IsDedicated = function() return dedicated end } }
+local locally_paused, local_focus, local_busy, local_riding, modifier = false, false, false, false, false
+local G = { TheNet = { IsDedicated = function() return dedicated end, IsServerPaused = function() return locally_paused end },
+    IsPaused = function() return locally_paused end,
+    KEY_CTRL = "ctrl", KEY_ALT = "alt", KEY_SHIFT = "shift",
+    TheInput = { GetHUDEntityUnderMouse = function() return nil end, IsKeyDown = function() return modifier end } }
 local function add_hook(path, fn) hooks[#hooks + 1] = { path = path, fn = fn } end
 Hud.Install(G, { enabled = false, add_class_post_construct = add_hook })
 equal(#hooks, 0, "local hidden config installs no panel")
@@ -255,18 +363,57 @@ dedicated = true
 Hud.Install(G, { add_class_post_construct = add_hook })
 equal(#hooks, 0, "dedicated server loads no HUD")
 dedicated = false
-Hud.Install(G, { scale = 1.2, position = "lower", language = "en", add_class_post_construct = add_hook })
+Hud.Install(G, { scale = 1.2, position = "lower", language = "en", heatvision_key = "KEY_G", frostbreath_key = "KEY_C", add_class_post_construct = add_hook })
 equal(hooks[1].path, "widgets/controls")
 local other = { owner = { prefab = "wilson" }, topright_root = setmetatable({ children = {} }, { __index = Widget }) }
 hooks[1].fn(other)
 equal(#other.topright_root.children, 0, "other characters do not receive Superman's HUD")
 local controls = { owner = client, topright_root = setmetatable({ children = {} }, { __index = Widget }) }
 client.prefab = "krypton_survivor"
+client.HUD = { HasInputFocus = function() return local_focus end }
+client.components = { playercontroller = { IsEnabled = function() return true end,
+    IsBusy = function() return local_busy end, IsDoingOrWorking = function() return false end } }
+client.replica = { rider = { IsRiding = function() return local_riding end } }
 hooks[1].fn(controls)
 assert(controls.krypton_ability_status ~= nil)
 equal(controls.krypton_ability_status.position[2], -525)
 equal(controls.krypton_ability_status.scale, 1.2)
 equal(controls.krypton_ability_status.title.text, "Abilities")
+local panel = controls.krypton_ability_status
+equal(panel.skill_rows[1].text, "Heat [G]: Ready", "installed HUD displays configured heat key")
+equal(panel.skill_rows[2].text, "Frost [C]: Ready", "installed HUD displays configured frost key")
+local original_timer = panel.rows[3].text
+for _, set_blocked in ipairs({
+    function(value) local_focus = value end,
+    function(value) local_busy = value end,
+    function(value) locally_paused = value end,
+}) do
+    set_blocked(true); panel:OnUpdate(.1)
+    equal(panel.skill_rows[1].text, "Heat [G]: Unavailable", "local input state narrows availability promptly")
+    equal(panel.rows[3].text, original_timer, "local HUD tick never advances revival clock")
+    set_blocked(false); panel:OnUpdate(.1)
+    equal(panel.skill_rows[1].text, "Heat [G]: Ready", "local input restoration does not wait for server polling")
+end
+local_riding = true; panel:OnUpdate(.1)
+equal(panel.skill_rows[2].text, "Frost [C]: Unavailable", "replica riding immediately dims breath")
+local_riding = false; modifier = true; panel:OnUpdate(.1)
+equal(panel.skill_rows[2].text, "Frost [C]: Unavailable", "modifier guard reflects actual frost input handler")
+modifier = false; panel:OnUpdate(.1)
+equal(panel.skill_rows[2].text, "Frost [C]: Ready")
+client._krypton_status_flags.data = caster._krypton_status_flags:value()
+panel:Refresh()
+equal(panel.skill_rows[1].text, "Heat [G]: Cooldown")
+local paused_bits = client._krypton_status_flags:value()
+locally_paused = true; panel:OnUpdate(100)
+equal(panel.skill_rows[1].text, "Heat [G]: Unavailable", "pause blocks local input without inventing completion")
+equal(client._krypton_status_flags:value(), paused_bits, "real-time UI updates do not advance server cooldown flags")
+locally_paused = false; panel:OnUpdate(.1)
+equal(panel.skill_rows[1].text, "Heat [G]: Cooldown", "resume retains actual unfinished simulation cooldown")
+caster._krypton_heatvision_nextcast = now
+Status.Sync(caster)
+client._krypton_status_flags.data = caster._krypton_status_flags:value()
+panel.events[Status.DIRTY_EVENT].fn()
+equal(panel.skill_rows[1].text, "Heat [G]: Ready", "only server completion restores ready")
 hooks[1].fn(controls)
 equal(#controls.topright_root.children, 1, "no duplicate panel")
 

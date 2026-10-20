@@ -3,6 +3,9 @@ local function load_source(path)
     assert(chunk, err)
     return chunk()
 end
+package.preload["krypton_combat_targets"] = function()
+    return load_source("mod/scripts/krypton_combat_targets.lua")
+end
 local function equal(actual, expected, message)
     assert(actual == expected, (message or "unexpected value") .. ": expected " .. tostring(expected) .. ", got " .. tostring(actual))
 end
@@ -24,7 +27,7 @@ TheNet = { paused = false, dedicated = false,
 local now, query_count, targets, spawned = 20, 0, {}, {}
 GetTime = function() return now end
 local function entity(x, z)
-    local inst = { x = x or 0, z = z or 0, valid = true, tags = {}, components = {}, tasks = {}, listeners = {} }
+    local inst = { x = x or 0, z = z or 0, valid = true, tags = {}, components = {}, tasks = {}, listeners = {}, events = {} }
     inst.IsValid = function(self) return self.valid end
     inst.HasTag = function(self, tag) return self.tags[tag] == true end
     inst.GetPhysicsRadius = function(self, default) return self.radius or default end
@@ -51,6 +54,12 @@ local function entity(x, z)
     inst.ListenForEvent = function(self, name, fn) self.listeners[name] = fn end
     inst.RemoveEventCallback = function(self, name, fn)
         if self.listeners[name] == fn then self.listeners[name] = nil end
+    end
+    inst.PushEvent = function(self, name)
+        local channel = self._krypton_frostbreath_channel
+        table.insert(self.events, { name = name, nextcast = self._krypton_frostbreath_nextcast,
+            channel = channel, ready = channel ~= nil and type(channel.stop) == "function"
+                and self.listeners.death == channel.stop and channel.task ~= nil and channel.endtask ~= nil })
     end
     local function schedule(delay, fn, periodic)
         local task = { delay = delay, fn = fn, periodic = periodic }
@@ -101,7 +110,10 @@ local function reject(p, x, z, message)
     equal(FrostBreath.Cast(p, x, z), false, message)
     equal(query_count, queries, message .. " must not acquire targets")
     equal(#spawned, effects, message .. " must not emit FX")
-    if p ~= nil then equal(p._krypton_frostbreath_nextcast, nil, message .. " must not consume cooldown") end
+    if p ~= nil then
+        equal(p._krypton_frostbreath_nextcast, nil, message .. " must not consume cooldown")
+        equal(#p.events, 0, message .. " must not announce a successful cast")
+    end
 end
 reject(nil, 1, 0, "missing player")
 for _, value in ipairs({ "1", false, {}, math.huge, -math.huge, 0 / 0 }) do
@@ -183,6 +195,11 @@ end
 equal(caster.suspended, 1.1, "flight art exposes animated head while breathing")
 close(caster._krypton_frostbreath_nextcast, 21.2, "authoritative cooldown")
 local channel = caster._krypton_frostbreath_channel
+equal(#caster.events, 1, "one status event after successful frost breath")
+equal(caster.events[1].name, "krypton_skillstatechanged", "shared skill feedback event")
+equal(caster.events[1].channel, channel, "status sees active channel before notification")
+assert(caster.events[1].ready, "status notification follows complete channel/task/listener setup")
+close(caster.events[1].nextcast, 21.2, "status sees server cooldown")
 equal(#spawned, 1, "one network proxy serves all observers")
 equal(spawned[1].caster, caster, "proxy replicates caster")
 now = 20.2
@@ -194,6 +211,7 @@ equal(entered.components.freezable.calls, 1, "entering the cone during the chann
 local queries_before_replay = query_count
 equal(FrostBreath.Cast(caster, 100000, 0), false, "rapid RPC replay blocked")
 equal(query_count, queries_before_replay, "replay does not acquire entities")
+equal(#caster.events, 1, "refused repeat sends no skill status event")
 now = 21
 channel.endtask.fn(caster)
 equal(channel.finished, true, "channel ends on time")
@@ -202,11 +220,24 @@ equal(caster._krypton_frostbreath_channel, nil, "active channel cleared")
 equal(spawned[1].valid, false, "channel clears shared FX")
 equal(caster.listeners.death, nil, "death listener removed")
 equal(caster.listeners.onremove, nil, "remove listener removed")
+equal(#caster.events, 2, "channel completion announces the changed skill state")
+equal(caster.events[2].channel, nil, "completion clears channel before notifying HUD")
+channel.stop()
+equal(#caster.events, 2, "repeated old cleanup cannot notify newer state")
 equal(FrostBreath.Cast(caster, 1, 0), false, "cooldown remains after channel completion")
 now = 21.2
 targets = {}
 equal(FrostBreath.Cast(caster, 1, 0), true, "cast allowed at exact cooldown boundary")
 caster._krypton_frostbreath_channel.stop()
+
+local superseded = player()
+equal(FrostBreath.Cast(superseded, 1, 0), true, "superseded channel fixture")
+local old_channel = superseded._krypton_frostbreath_channel
+local new_channel = {}
+superseded._krypton_frostbreath_channel = new_channel
+old_channel.stop()
+equal(superseded._krypton_frostbreath_channel, new_channel, "old cleanup preserves a newer channel")
+equal(#superseded.events, 1, "only current channel cleanup may announce state changes")
 
 -- Every interruption terminates both effects and periodic target acquisition.
 for _, modify in ipairs({

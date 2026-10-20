@@ -1,0 +1,2 @@
+# Release validation needs no NumPy, OpenCV, local game files or asset rebuild.
+Pillow==11.0.0

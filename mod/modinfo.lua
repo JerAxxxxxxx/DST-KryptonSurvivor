@@ -1,7 +1,7 @@
 name = "Krypton Survivor · 氪星幸存者"
 description = "超人测试版 / Superman prototype\n飞行（默认 V）、Ctrl＋地图右键瞬移、热视线（R）、冰冻吐息（X）、能力状态面板、拉奥之锋、星核护符、完整夜视和白天恢复。\nFlight (V), Ctrl + map right-click teleport, heat vision (R), frost breath (X), ability HUD, Rao's Edge, Starcore Amulet, night vision and daytime recovery."
 author = "Krypton Survivor Project"
-version = "0.8.2"
+version = "0.9.0"
 api_version = 10
 dst_compatible = true
 dont_starve_compatible = false
@@ -115,6 +115,15 @@ configuration_options = {
         },
         default = "KEY_R",
         client = true,
+    },
+    {
+        name = "heatvision_ignite",
+        label = "热视线点燃目标 / Heat vision ignition",
+        options = {
+            { description = "开启 / Enabled", data = true },
+            { description = "关闭 / Disabled", data = false },
+        },
+        default = true,
     },
     {
         name = "heatvision_damage",

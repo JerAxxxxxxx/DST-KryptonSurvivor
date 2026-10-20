@@ -1,9 +1,5 @@
 local HeatVision = {}
-
-local EXCLUDE_TAGS = {
-    "INLIMBO", "player", "playerghost", "companion", "wall", "structure",
-    "FX", "notarget", "invisible", "player_aligned", "domesticated",
-}
+local Targets = require("krypton_combat_targets")
 
 local function IsFinite(value)
     return type(value) == "number" and value == value and value > -math.huge and value < math.huge
@@ -19,13 +15,6 @@ function HeatVision.CanCast(player)
     local controller = player.components.playercontroller
     return controller ~= nil and controller:IsEnabled() and not controller:IsBusy()
         and not controller:IsDoingOrWorking()
-end
-
-local function IsProtected(target)
-    for _, tag in ipairs(EXCLUDE_TAGS) do
-        if target:HasTag(tag) then return true end
-    end
-    return target.components.follower ~= nil and target.components.follower.leader ~= nil
 end
 
 function HeatVision.Cast(player, aim_x, aim_z)
@@ -46,6 +35,7 @@ function HeatVision.Cast(player, aim_x, aim_z)
 
     local tuning = TUNING.KRYPTON_SURVIVOR
     player._krypton_heatvision_nextcast = now + tuning.heatvision_interval
+    player:PushEvent("krypton_skillstatechanged")
     local range, width = tuning.heatvision_range, tuning.heatvision_width
     local mid_x, mid_z = x + dx * range / 2, z + dz * range / 2
     player:ForceFacePoint(x + dx * range, y, z + dz * range)
@@ -58,9 +48,9 @@ function HeatVision.Cast(player, aim_x, aim_z)
     if fx ~= nil then fx:SetCaster(player, dx, dz) end
 
     -- Padding includes large creatures whose body intersects the beam.
-    local targets = TheSim:FindEntities(mid_x, y, mid_z, range / 2 + width + 3, { "_combat" }, EXCLUDE_TAGS)
+    local targets = TheSim:FindEntities(mid_x, y, mid_z, range / 2 + width + 3, { "_combat" }, Targets.EXCLUDE_TAGS)
     for _, target in ipairs(targets) do
-        if target ~= player and target:IsValid() and not IsProtected(target)
+        if target ~= player and target:IsValid() and not Targets.IsProtected(target)
             and target.components.health ~= nil and not target.components.health:IsDead()
             and target.components.combat ~= nil and player.components.combat:CanTarget(target) then
             local tx, ty, tz = target.Transform:GetWorldPosition()
@@ -72,7 +62,8 @@ function HeatVision.Cast(player, aim_x, aim_z)
             if along >= 0 and past_end * past_end + across * across <= radius * radius then
                 target.components.combat:GetAttacked(player, tuning.heatvision_damage, nil, "fire")
                 -- Do not ignite corpses or fire-immune targets; native fire may spread.
-                if target:IsValid() and target.components.health ~= nil and not target.components.health:IsDead()
+                if tuning.heatvision_ignite ~= false
+                    and target:IsValid() and target.components.health ~= nil and not target.components.health:IsDead()
                     and target.components.burnable ~= nil and not target:HasTag("fireimmune") then
                     target.components.burnable:Ignite(true, player, player)
                 end

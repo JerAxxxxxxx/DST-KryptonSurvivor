@@ -2,7 +2,7 @@
 
 仓库中的 `mod/` 已包含编译资源，可直接安装。修改 Lua 只需 Node.js；重新处理图片和生成预览还需要 Python 与本机安装的《饥荒联机版》。
 
-当前版本为 **0.8.2，已发布至 Steam 创意工坊**。本轮增加能力状态面板、冰冻吐息及其张嘴表情和图标，并修正侧面头部符号的帧覆盖。
+当前代码版本为 **0.9.0**，技能反馈已通过游戏测试，联机保护专项待测；Steam 创意工坊仍为 **0.8.2**，暂不更新。本轮增加技能按键与状态反馈、热视线点燃开关、统一友方保护，以及独立资源自动检查。
 
 ## 环境
 
@@ -14,6 +14,15 @@
 npm ci
 npm run check
 ```
+
+发布前资源检查无需游戏安装，只需Python 3.13及Pillow：
+
+```powershell
+python -m pip install -r requirements-check.txt
+npm run check:assets
+```
+
+`requirements-check.txt` 只供检查，完整美术重建依赖仍使用 `requirements.txt`。GitHub Actions在推送和拉取请求时分别运行Lua回归与资源检查；两项通过后再继续发布流程。
 
 需要重建美术资源时，再安装 Python 依赖：
 
@@ -114,6 +123,8 @@ python tools/preview_heatvision.py --game-dir "你的饥荒联机版安装目录
 
 面板复用原版 `images/global.xml` 背景；三行图标来自 `assets/source/ui/`，选区和位置见 `assets/slices.json` 的 `hud_icons`。运行 `python tools/build_ability_ui_assets.py` 可生成三份 128×128 透明图集和完整 mip 层，以及 `build/previews/ability-icons-compiled.png`、`ability-status-ui-composition.png`。后者用于核对中英文就绪、冷却、未装备的文字与图标布局，不是真实游戏截图。
 
+0.9.0在旧面板顶端与三行位置不变的情况下向下扩展，追加两行纯文字技能状态。真实本机按键由modmain传入，服务器仍使用同一个ushort标志同步技能可用、冷却与施放状态；成功施法及吐息结束触发状态事件，单次模拟时间任务在最近冷却到期时刷新，避免1秒轮询漏掉0.35秒冷却。客户端每0.1秒只评估本机操作限制，不修改网络标志或复活剩余时间。新增缩放预览为 `build/previews/ability-status-ui-scale-preview.png`。
+
 `status_hud_enabled`、`status_hud_scale` 和 `status_hud_position` 为每位玩家独立设置，支持显示／隐藏、0.8／1／1.2 倍，以及 `default`／`left`／`lower` 三个固定位置。悬停说明使用原生 tooltip；没有自由拖动、按钮或额外快捷键。
 
 `tests/status_hud.lua` 验证服务器与远程快照、暂停不倒数、装备与冷却变化、死亡与重进、非超人和专用服务器无 UI，以及本地配置与控制事件。屏幕分辨率、其他 HUD Mod 和实际联机布局仍需游戏试玩。
@@ -145,7 +156,17 @@ python tools/preview_frostbreath.py --game-dir "你的饥荒联机版安装目�
 
 ## 检查
 
+### 资源与发布副本检查
+
+`npm run check:assets`依次运行 `tools/check_assets.py` 与 `tools/test_asset_validation.py`。资源检查扫描全部Mod Lua中的字面ANIM／ATLAS／IMAGE声明，严格校验相对路径和大小写；自有资源必须随包提供，明确列出的原生动画只在运行时加载，并拒绝将其打包分发。新增自有动画时应同时更新自有包清单与具体内容验证。
+
+负例检查只复制自有项目资源到临时发布树，以Python `-S`和独立Pillow证明检查不依赖本机游戏、user-pic、build记录或NumPy／OpenCV。它覆盖旧版侧面缺帧、符号表乱序、纹理截断、缺图集／动画、错误大小写与未审查的动画包，所有损坏只发生在临时副本，不修改源图或工作目录编译资源。
+
+### Lua与游戏行为
+
 修改 Lua 后运行 `npm run check`。检查覆盖 Lua 5.1 语法、资源引用、语言、选人模型、角色属性、装备、联机分支、采集、所有权、范围伤害、夜视与热视线，以及飞行碰撞、存档、预测、视觉和地图瞬移的落点、权限、暂停恢复与输入焦点。工具操作回归覆盖原生工作优先于采集的情形、连续空格采集、已采完植物保护、服务器指定目标验证、右键挖掘及原有工具动作。GitHub Actions 在推送和拉取请求时执行同一套检查，无需安装游戏。
+
+0.9.0新增三种范围效果的共用目标保护交叉回归，验证点燃关闭仍造成原伤害、友方保护不妨碍灭火、技能事件时序与短冷却恢复。公共规则位于 `mod/scripts/krypton_combat_targets.lua`；主目标普攻与原生CanTarget校验保持各自职责。
 
 0.8.0 新增状态面板与冰冻吐息的独立回归，覆盖权威状态／冷却同步、本地 UI 配置，以及吐息扇形边界、目标筛选、单次冷量、灭火、输入拦截、冷却和生命周期清理。自动检查结果不等同于真实游戏效果已确认。
 

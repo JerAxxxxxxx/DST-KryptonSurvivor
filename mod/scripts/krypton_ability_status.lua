@@ -1,9 +1,13 @@
 local Status = {}
 local Flight = require("krypton_flight")
+local HeatVision = require("krypton_heatvision")
+local FrostBreath = require("krypton_frostbreath")
 
 local DIRTY_EVENT = "krypton_ability_statusdirty"
 local FLAGS = { ALIVE = 1, FLYING = 2, FLIGHT_ENABLED = 4, AMULET = 8,
-    PROTECTED = 16, RIDING = 32, REVIVING = 64, INITIALIZED = 128, REVIVE_SUPPORTED = 256 }
+    PROTECTED = 16, RIDING = 32, REVIVING = 64, INITIALIZED = 128, REVIVE_SUPPORTED = 256,
+    HEAT_AVAILABLE = 512, HEAT_COOLDOWN = 1024, FROST_AVAILABLE = 2048,
+    FROST_COOLDOWN = 4096, FROST_CASTING = 8192, FROST_ENABLED = 16384 }
 
 local function HasFlag(flags, flag)
     return math.floor(flags / flag) % 2 == 1
@@ -23,6 +27,26 @@ function Status.CommonInit(inst)
     -- Declare the same netvars on every peer, before SetPristine is called.
     inst._krypton_status_flags = net_ushortint(inst.GUID, "krypton_survivor.status_flags", DIRTY_EVENT)
     inst._krypton_status_cooldown = net_ushortint(inst.GUID, "krypton_survivor.status_cooldown", DIRTY_EVENT)
+end
+
+local function NextSkillRefresh(inst, now)
+    local due
+    for _, value in ipairs({ inst._krypton_heatvision_nextcast or 0,
+        inst._krypton_frostbreath_nextcast or 0,
+        inst._krypton_frostbreath_channel ~= nil and inst._krypton_frostbreath_channel.ends or 0 }) do
+        if IsFinite(value) and value > now and (due == nil or value < due) then due = value end
+    end
+    if inst._krypton_status_skill_due == due then return end
+    if inst._krypton_status_skill_task ~= nil then inst._krypton_status_skill_task:Cancel() end
+    inst._krypton_status_skill_task, inst._krypton_status_skill_due = nil, due
+    if due ~= nil then
+        -- A one-shot simulation task catches 0.35/1.2-second cooldowns without
+        -- increasing periodic network polling or running a client wall clock.
+        inst._krypton_status_skill_task = inst:DoTaskInTime(due - now, function(player)
+            player._krypton_status_skill_task, player._krypton_status_skill_due = nil, nil
+            Status.Sync(player)
+        end)
+    end
 end
 
 function Status.Sync(inst)
@@ -46,8 +70,20 @@ function Status.Sync(inst)
         if core:IsProtected() then flags = flags + FLAGS.PROTECTED end
         if core:IsAutoReviving() then flags = flags + FLAGS.REVIVING end
     end
-    inst._krypton_status_cooldown:set(RemainingSeconds(core ~= nil and core:GetCooldownRemaining() or 0))
-    inst._krypton_status_flags:set(flags)
+    local now = GetTime()
+    if HeatVision.CanCast(inst) then flags = flags + FLAGS.HEAT_AVAILABLE end
+    if now < (inst._krypton_heatvision_nextcast or 0) then flags = flags + FLAGS.HEAT_COOLDOWN end
+    if TUNING.KRYPTON_SURVIVOR.frostbreath_enabled ~= false then flags = flags + FLAGS.FROST_ENABLED end
+    if FrostBreath.CanCast(inst) then flags = flags + FLAGS.FROST_AVAILABLE end
+    if now < (inst._krypton_frostbreath_nextcast or 0) then flags = flags + FLAGS.FROST_COOLDOWN end
+    local channel = inst._krypton_frostbreath_channel
+    if channel ~= nil and not channel.finished and (channel.ends == nil or now < channel.ends) then
+        flags = flags + FLAGS.FROST_CASTING
+    end
+    local cooldown = RemainingSeconds(core ~= nil and core:GetCooldownRemaining() or 0)
+    if inst._krypton_status_cooldown:value() ~= cooldown then inst._krypton_status_cooldown:set(cooldown) end
+    if inst._krypton_status_flags:value() ~= flags then inst._krypton_status_flags:set(flags) end
+    NextSkillRefresh(inst, now)
 end
 
 function Status.MasterInit(inst)
@@ -56,13 +92,18 @@ function Status.MasterInit(inst)
     -- Inventory's equip events run after its slot assignment; the existing
     -- Starcore component owns all protection, revival and save/load behavior.
     for _, event in ipairs({ "equip", "unequip", "krypton_flyingdirty", "death",
-        "ms_becameghost", "ms_respawnedfromghost", "mounted", "dismounted" }) do
+        "ms_becameghost", "ms_respawnedfromghost", "mounted", "dismounted", "newstate",
+        "krypton_skillstatechanged" }) do
         inst:ListenForEvent(event, sync)
     end
     Status.Sync(inst)
     inst:DoTaskInTime(0, sync)
     -- Native entity periodic tasks use simulation time and stop with pause.
     inst._krypton_status_task = inst:DoPeriodicTask(1, sync)
+    inst:ListenForEvent("onremove", function(player)
+        if player._krypton_status_skill_task ~= nil then player._krypton_status_skill_task:Cancel() end
+        player._krypton_status_skill_task, player._krypton_status_skill_due = nil, nil
+    end)
 end
 
 function Status.GetSnapshot(inst)
@@ -80,6 +121,12 @@ function Status.GetSnapshot(inst)
         riding = HasFlag(flags, FLAGS.RIDING),
         reviving = HasFlag(flags, FLAGS.REVIVING),
         revive_supported = HasFlag(flags, FLAGS.REVIVE_SUPPORTED),
+        heat_available = HasFlag(flags, FLAGS.HEAT_AVAILABLE),
+        heat_cooldown = HasFlag(flags, FLAGS.HEAT_COOLDOWN),
+        frost_available = HasFlag(flags, FLAGS.FROST_AVAILABLE),
+        frost_cooldown = HasFlag(flags, FLAGS.FROST_COOLDOWN),
+        frost_casting = HasFlag(flags, FLAGS.FROST_CASTING),
+        frost_enabled = HasFlag(flags, FLAGS.FROST_ENABLED),
         cooldown = inst._krypton_status_cooldown:value(),
     }
 end
@@ -88,6 +135,56 @@ local COLOURS = {
     blue = { .40, .76, 1, 1 }, green = { .46, .91, .59, 1 },
     grey = { .65, .67, .70, 1 }, amber = { 1, .79, .39, 1 },
 }
+
+local function KeyLabel(value, fallback)
+    if value == "disabled" then return "-", false end
+    return type(value) == "string" and value:match("^KEY_([A-Z])$") or fallback, true
+end
+
+function Status.GetSkillRows(snapshot, language, keys, context)
+    local zh, rows = language == "zh", {}
+    keys, context = keys or {}, context or {}
+    for _, skill in ipairs({
+        { id = "heat", key = keys.heatvision_key, fallback = "R", title = zh and "热视线" or "Heat" },
+        { id = "frost", key = keys.frostbreath_key, fallback = "X", title = zh and "吐息" or "Frost" },
+    }) do
+        local key, key_enabled = KeyLabel(skill.key, skill.fallback)
+        local state
+        if not snapshot.initialized then state = "syncing"
+        elseif skill.id == "frost" and not snapshot.frost_enabled then state = "server_off"
+        elseif not key_enabled then state = "key_off"
+        elseif not snapshot.alive or context.blocked or (skill.id == "frost" and context.frost_blocked) then state = "unavailable"
+        elseif not snapshot[skill.id .. "_available"] then state = "unavailable"
+        elseif skill.id == "frost" and snapshot.frost_casting then state = "casting"
+        elseif snapshot[skill.id .. "_cooldown"] then state = "cooldown"
+        else state = "ready" end
+        local labels = zh and {
+            syncing = "同步中…", server_off = "服务器关闭", key_off = "按键关闭",
+            unavailable = "不可用", casting = "施放中", cooldown = "冷却中", ready = "就绪",
+        } or {
+            syncing = "Syncing...", server_off = "Server off", key_off = "Key off",
+            unavailable = "Unavailable", casting = "Casting", cooldown = "Cooldown", ready = "Ready",
+        }
+        local ready, casting = state == "ready", state == "casting"
+        local base = COLOURS[ready and "green" or (casting and "blue" or "grey")]
+        local colour = { base[1], base[2], base[3], (ready or casting) and 1 or .75 }
+        local tooltip = zh
+            and ("鼠标瞄准后按 " .. key .. "。技能状态由服务器确认；短冷却用变暗表示。\n聊天、界面、暂停或忙碌时暂不可用；按键可在本机模组配置中修改。")
+            or ("Aim with the mouse and press " .. key .. ". Skill state is confirmed by the server; short cooldowns dim this row.\nChat, interfaces, pause or busy actions temporarily block input. Change the key in local mod settings.")
+        if not key_enabled then
+            tooltip = zh and "此技能的本机快捷键已关闭，可在模组配置中重新选择按键。"
+                or "This skill's local shortcut is disabled. Choose a key in mod settings to enable input."
+        end
+        if skill.id == "frost" then
+            tooltip = tooltip .. (zh and "\n吐息持续约1秒，间隔1.2秒；骑乘时不可用，服务器可关闭能力。"
+                or "\nBreath lasts about 1 second with a 1.2-second interval; riding blocks it and the server can disable it.")
+        end
+        rows[#rows + 1] = { key = skill.id, state = state,
+            text = skill.title .. " [" .. key .. "]" .. (zh and "：" or ": ") .. labels[state],
+            colour = colour, tooltip = tooltip }
+    end
+    return rows
+end
 
 local function Clock(seconds)
     seconds = RemainingSeconds(seconds)

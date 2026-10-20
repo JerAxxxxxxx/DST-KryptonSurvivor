@@ -17,6 +17,7 @@ G.TUNING.KRYPTON_SURVIVOR = {
     daylight_sanity_regen = 100,
     daylight_health_regen = 100,
     heatvision_damage = GetModConfigData("heatvision_damage") or 2000,
+    heatvision_ignite = GetModConfigData("heatvision_ignite") ~= false,
     heatvision_range = 20,
     heatvision_width = 0.8,
     heatvision_interval = 0.35,
@@ -212,6 +213,10 @@ require("krypton_ability_hud").Install(G, {
     scale = GetModConfigData("status_hud_scale", true) or 1,
     position = GetModConfigData("status_hud_position", true) or "default",
     language = language,
+    heatvision_key = key_name == "disabled" and "disabled"
+        or (heatvision_keys[key_name] ~= nil and key_name or "KEY_R"),
+    frostbreath_key = frost_key_name == "disabled" and "disabled"
+        or (frost_keys[frost_key_name] ~= nil and frost_key_name or "KEY_X"),
     add_class_post_construct = AddClassPostConstruct,
 })
-print("[Krypton Survivor] Registered krypton_survivor; version 0.8.2")
+print("[Krypton Survivor] Registered krypton_survivor; version 0.9.0")

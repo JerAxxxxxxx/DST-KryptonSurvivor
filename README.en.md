@@ -4,7 +4,7 @@
 
 Bring DC's Superman to **Don't Starve Together** on Steam. Enjoy powerful stats, full night vision, heat vision, frost breath, flight, map teleportation, the exclusive axe **Rao's Edge** and the **Starcore Amulet**. Built for relaxed exploration and overpowered combat with friends.
 
-**Current version: 0.8.2, available on the Steam Workshop.** Supports Chinese and English.
+**Current code version: 0.9.0.** Skill feedback has passed in-game testing; multiplayer protection scenarios remain to be tested. **Steam Workshop remains at 0.8.2, with no update planned yet.** Supports Chinese and English; the features below describe the repository code. See the [changelog](docs/changelog.md) for Workshop version differences.
 
 [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3811663817) · [Changelog](docs/changelog.md) · [Development guide](docs/build.md) · [Report an issue](https://github.com/JerAxxxxxxx/DST-KryptonSurvivor/issues)
 
@@ -50,6 +50,7 @@ Heat vision is an innate ability. Aim with the mouse and press **R**, whether em
 - Beams start at the eyes and follow head movement, with a bright core, glow and eye lights.
 - Direct hits skip players, followers, companions, domesticated creatures, walls and structures.
 - Surviving targets that can burn and are not fire-immune may catch fire. The game's normal fire spread still applies.
+- Servers can disable **Heat vision ignition** while retaining beam damage and visuals. Ignition stays enabled by default.
 
 The shortcut is inactive while chatting, interacting with interfaces or placing buildings. Heat vision cannot fire while busy, working, dead, a ghost, or while the server is paused.
 
@@ -71,7 +72,7 @@ Casting temporarily uses the supplied open-mouth front or profile head, with mis
 Superman's exclusive axe is provided and automatically equipped on spawn. Other characters cannot use it and will drop it if they pick it up.
 
 - Configurable damage: **2,000, 10,000 or 50,000**, default **2,000**.
-- Extended melee reach and area damage around the target. Area damage skips players, companions, walls, structures and creatures that already have a follower leader.
+- Extended melee reach and area damage around the target. Area damage shares heat vision and freezing's protection rules, skipping players, followers, companions, domesticated and player-aligned creatures, walls and structures. Deliberate primary melee attacks keep native behavior.
 - Works as an axe, pickaxe, hammer and shovel, at **10×** normal tool efficiency.
 - **Space and left-click prioritize harvesting** berries, grass and twigs. Continuing to hold Space after picking will not uproot those plants; use right-click when you want to transplant them. Tree stumps can still be dug with Space.
 - Unlimited durability. Attacks, tool work and lighting consume no fuel or resources.
@@ -111,7 +112,7 @@ Hovering and flight movement use the supplied front, side and back artwork. Flig
 
 ## Ability status HUD
 
-A compact panel appears in the **upper-right corner, below the health, hunger, sanity and moisture displays**, only for Superman. It shows three rows:
+A compact panel appears in the **upper-right corner, below the health, hunger, sanity and moisture displays**, only for Superman. Its upper three rows show:
 
 - **Flight**: blue when enabled; gray when disabled, suspended by riding or unavailable.
 - **Amulet**: green while dry and safe-temperature protection is active; gray when not equipped or inactive.
@@ -121,6 +122,8 @@ Dryness and temperature protection remain active during revival cooldown, and co
 
 Each row has its own cape, star shield or revival-arrow icon, dimmed when inactive; status text and cooldown remain visible. Each player can hide the panel, choose **80%, 100% or 120%** size, and switch between **default, shifted left or shifted down** positions in mod configuration.
 
+Two additional text rows show **heat vision and frost breath**, including each player's actual configured key and readiness, cooldown, casting or unavailability. Short cooldowns dim the rows without rapidly changing decimal timers. Disabled keys and server-disabled frost breath are also explained. Skill state comes from the server and cooldown completion follows simulation time, stopping when paused. The panel remains read-only, with hover help.
+
 ## Configuration
 
 | Setting | Options | Default |
@@ -129,6 +132,7 @@ Each row has its own cape, star shield or revival-arrow icon, dimmed when inacti
 | Movement speed | 1.5×, 2×, 3× | 1.5× |
 | Axe damage | 2,000, 10,000, 50,000 | 2,000 |
 | Heat vision damage | 2,000, 10,000, 50,000 | 2,000 |
+| Heat vision ignition (server) | Enabled, Disabled | Enabled |
 | Heat vision key | R, G, Z, Disabled | R |
 | Frost breath ability (server) | Enabled, Disabled | Enabled |
 | Frost breath key | X, C, N, Disable key | X |
@@ -140,7 +144,7 @@ Each row has its own cape, star shield or revival-arrow icon, dimmed when inacti
 | Ability HUD size | 80%, 100%, 120% | 100% |
 | Ability HUD position | Default, Shift left, Shift down | Default |
 
-There are **14 settings**. Each player configures their own heat vision, frost breath and flight keys, map teleport input, and HUD visibility, size and position. The Starcore Amulet revival cooldown is fixed at one game day.
+There are **15 settings**. Each player configures their own heat vision, frost breath and flight keys, map teleport input, and HUD visibility, size and position. The Starcore Amulet revival cooldown is fixed at one game day.
 
 ## Development
 
@@ -150,6 +154,8 @@ Lua checks require **Node.js 24**. From the repository root, run:
 npm ci
 npm run check
 ```
+
+For pre-release asset validation, install Python 3.13 and the minimal dependencies in `requirements-check.txt`, then run `npm run check:assets`. This checks owned animation archives, atlases, textures and head-frame coverage, including rejection of damaged assets. It requires neither an installed game nor an artwork rebuild. GitHub Actions is configured to run the same validation when the code is pushed.
 
 `mod/` contains installable scripts and compiled assets. `assets/` contains the source artwork, slice definitions and source notes. `tools/` provides asset construction, preview and packaging utilities.
 

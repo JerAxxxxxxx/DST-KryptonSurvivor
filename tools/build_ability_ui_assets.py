@@ -49,31 +49,45 @@ def preview_icons(decoded):
 
 
 def preview_hud(decoded):
-    """Show exact row/icon layout and full strings in both supported languages."""
+    """Show the five-row UI, including short cooldowns and local input states."""
     scenarios = [
         ('Ready', ['飞行：已开启', '护符：保护生效', '复活：已就绪'],
-         ['Flight: Enabled', 'Amulet: Protected', 'Revive: Ready'], [True, True, True]),
-        ('Cooldown', ['飞行：已开启', '护符：保护生效', '复活：冷却 08:00'],
-         ['Flight: Enabled', 'Amulet: Protected', 'Revive: Cooldown 08:00'], [True, True, True]),
+         ['Flight: Enabled', 'Amulet: Protected', 'Revive: Ready'], [True, True, True],
+         ['热视线 [R]：就绪', '吐息 [X]：就绪'], ['Heat [R]: Ready', 'Frost [X]: Ready'], ['ready', 'ready']),
+        ('Casting / cooldown', ['飞行：已开启', '护符：保护生效', '复活：冷却 08:00'],
+         ['Flight: Enabled', 'Amulet: Protected', 'Revive: Cooldown 08:00'], [True, True, True],
+         ['热视线 [R]：冷却中', '吐息 [X]：施放中'], ['Heat [R]: Cooldown', 'Frost [X]: Casting'], ['cooldown', 'casting']),
         ('Not equipped', ['飞行：已关闭', '护符：未装备', '复活：未装备'],
-         ['Flight: Disabled', 'Amulet: Not equipped', 'Revive: Not equipped'], [False, False, False]),
+         ['Flight: Disabled', 'Amulet: Not equipped', 'Revive: Not equipped'], [False, False, False],
+         ['热视线 [R]：就绪', '吐息 [X]：就绪'], ['Heat [R]: Ready', 'Frost [X]: Ready'], ['ready', 'ready']),
+        ('Custom keys / unavailable', ['飞行：骑乘中暂停', '护符：保护生效', '复活：已就绪'],
+         ['Flight: Riding', 'Amulet: Protected', 'Revive: Ready'], [False, True, True],
+         ['热视线 [G]：不可用', '吐息 [N]：服务器关闭'], ['Heat [G]: Unavailable', 'Frost [N]: Server off'], ['unavailable', 'server_off']),
+        ('Local keys off', ['飞行：已开启', '护符：保护生效', '复活：已就绪'],
+         ['Flight: Enabled', 'Amulet: Protected', 'Revive: Ready'], [True, True, True],
+         ['热视线 [-]：按键关闭', '吐息 [-]：按键关闭'], ['Heat [-]: Key off', 'Frost [-]: Key off'], ['key_off', 'key_off']),
+        ('Syncing', ['飞行：同步中…', '护符：同步中…', '复活：同步中…'],
+         ['Flight: Syncing...', 'Amulet: Syncing...', 'Revive: Syncing...'], [False, False, False],
+         ['热视线 [R]：同步中…', '吐息 [X]：同步中…'], ['Heat [R]: Syncing...', 'Frost [X]: Syncing...'], ['syncing', 'syncing']),
     ]
     zh_font_path, en_font_path = 'C:/Windows/Fonts/msyh.ttc', 'C:/Windows/Fonts/arial.ttf'
     fonts = [ImageFont.truetype(zh_font_path, 22), ImageFont.truetype(en_font_path, 18)]
+    skill_fonts = [ImageFont.truetype(zh_font_path, 18), ImageFont.truetype(en_font_path, 18)]
     titles = [ImageFont.truetype(zh_font_path, 23), ImageFont.truetype(en_font_path, 23)]
     label_font = ImageFont.truetype(en_font_path, 14)
-    canvas = Image.new('RGBA', (592, 600), '#34383e')
+    canvas = Image.new('RGBA', (592, 70 + len(scenarios) * 232), '#34383e')
     draw = ImageDraw.Draw(canvas)
     draw.text((296, 18), 'UI composition preview - not a game screenshot',
               fill='#eeeeee', font=label_font, anchor='mt')
     colors = ['#66c2ff', '#75e897', '#75e897']
-    for index, (label, zh, en, enabled) in enumerate(scenarios):
-        top = 70 + index * 172
+    panels = []
+    for index, (label, zh, en, enabled, skills_zh, skills_en, states) in enumerate(scenarios):
+        top = 70 + index * 232
         for column, texts in enumerate([zh, en]):
             left = 30 + column * 282
             draw.text((left, top - 23), label + (' / ZH' if column == 0 else ' / EN'),
                       fill='#eeeeee', font=label_font)
-            draw.rectangle((left, top, left + 249, top + 131), fill=(14, 17, 20, 255))
+            draw.rectangle((left, top, left + 249, top + 189), fill=(14, 17, 20, 255))
             draw.text((left + 10, top + 22), '超能力' if column == 0 else 'Abilities',
                       fill='#e8e0c7', font=titles[column], anchor='lm')
             for row, (name, icon) in enumerate(decoded.items()):
@@ -88,7 +102,36 @@ def preview_hud(decoded):
                 assert draw.textlength(texts[row], font=fonts[column]) <= 196, \
                     f'Preview text overflows row region: {texts[row]}'
                 draw.text((left + 44, cy), texts[row], fill=color, font=fonts[column], anchor='lm')
+            # Native coordinates y=-77/-104, with the unchanged top edge y=66.
+            skill_texts = skills_zh if column == 0 else skills_en
+            for row, (text, state) in enumerate(zip(skill_texts, states)):
+                assert draw.textlength(text, font=skill_fonts[column]) <= 230, \
+                    f'Preview skill text overflows row region: {text}'
+                rgba = (117, 232, 151, 255) if state == 'ready' else (
+                    (102, 194, 255, 255) if state == 'casting' else (166, 171, 179, 191))
+                layer = Image.new('RGBA', canvas.size)
+                ImageDraw.Draw(layer).text((left + 10, top + 143 + row * 27), text,
+                                           fill=rgba, font=skill_fonts[column], anchor='lm')
+                canvas.alpha_composite(layer)
+            if index == 1:
+                panels.append(canvas.crop((left, top, left + 250, top + 190)))
     canvas.convert('RGB').save(PREVIEWS / 'ability-status-ui-composition.png')
+    # Show both languages with the longest revival timer and new skill states
+    # at all three supported HUD scales. These are decoded UI pixel composites.
+    scales = (.8, 1, 1.2)
+    scaled = Image.new('RGBA', (846, 572), '#34383e')
+    scale_draw = ImageDraw.Draw(scaled)
+    scale_draw.text((423, 14), 'UI scale composition: 80% / 100% / 120% (not a game screenshot)',
+                    fill='#eeeeee', font=label_font, anchor='mt')
+    for column, scale in enumerate(scales):
+        x = 24 + sum(round(250 * previous) + 24 for previous in scales[:column])
+        for row, panel in enumerate(panels):
+            y = 55 + row * 258
+            scale_draw.text((x, y - 20), f'{"ZH" if row == 0 else "EN"} {round(scale * 100)}%',
+                            fill='#eeeeee', font=label_font)
+            scaled.alpha_composite(panel.resize((round(250 * scale), round(190 * scale)),
+                                                 Image.Resampling.LANCZOS), (x, y))
+    scaled.convert('RGB').save(PREVIEWS / 'ability-status-ui-scale-preview.png')
 
 
 def compile_assets():
