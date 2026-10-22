@@ -7,9 +7,11 @@ local assets = {
 }
 
 local function OnAttack(inst, attacker, target)
-    if target == nil or not target:IsValid() then return end
+    local radius = TUNING.KRYPTON_SURVIVOR.staff_aoe_radius
+    -- Zero disables only splash damage; native primary melee still applies.
+    if radius <= 0 or target == nil or not target:IsValid() then return end
     local x, y, z = target.Transform:GetWorldPosition()
-    local victims = TheSim:FindEntities(x, y, z, TUNING.KRYPTON_SURVIVOR.staff_aoe_radius,
+    local victims = TheSim:FindEntities(x, y, z, radius,
         { "_combat" }, Targets.EXCLUDE_TAGS)
     for _, victim in ipairs(victims) do
         if victim ~= target and victim ~= attacker and victim:IsValid() and not Targets.IsProtected(victim)

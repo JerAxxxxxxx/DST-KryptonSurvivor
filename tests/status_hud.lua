@@ -40,6 +40,7 @@ local function player()
     local inst = { GUID = 101, prefab = "krypton_survivor", tags = {}, listeners = {}, periodic = {}, deferred = {},
         components = {}, actual_flying = true, dead = false, riding = false,
         equipped = true, protected = true, reviving = false, cooldown_end = 0 }
+    inst._krypton_dark_form = { data = false, value = function(self) return self.data end }
     function inst:HasTag(tag) return self.tags[tag] == true end
     function inst:ListenForEvent(event, fn) self.listeners[event] = fn end
     function inst:DoPeriodicTask(interval, fn) self.periodic[#self.periodic + 1] = { interval = interval, fn = fn }; return {} end
@@ -79,12 +80,13 @@ assert(rows[2].colour[2] > rows[2].colour[1], "protection green")
 
 -- Remote HUD consumes only replicated state; it needs no server components.
 pristine = false
-local client = { GUID = 102 }
+local client = { GUID = 102, _krypton_dark_form = { data = false, value = function(self) return self.data end } }
 Status.CommonInit(client)
 pristine = true
 local function replicate()
     client._krypton_status_flags.data = host._krypton_status_flags:value()
     client._krypton_status_cooldown.data = host._krypton_status_cooldown:value()
+    client._krypton_dark_form.data = host._krypton_dark_form:value()
 end
 host.cooldown_end = 275
 host.periodic[1].fn()
@@ -229,7 +231,7 @@ equal(configured[2].text, "Frost [N]: Ready")
 local local_flags = client._krypton_status_flags:value()
 equal(skills(client, "zh", { heatvision_key = "disabled" })[1].state, "key_off")
 equal(skills(client, "zh", nil, { blocked = true })[1].state, "unavailable")
-equal(skills(client, "zh", nil, { frost_blocked = true })[1].state, "ready", "frost modifier/riding guard does not invent a heat restriction")
+equal(skills(client, "zh", nil, { frost_blocked = true })[1].state, "ready", "frost riding guard does not invent a heat restriction")
 equal(skills(client, "zh", nil, { frost_blocked = true })[2].state, "unavailable")
 equal(client._krypton_status_flags:value(), local_flags, "client guards never write server flags")
 caster.heat_can_cast = false; caster.frost_can_cast = false
@@ -248,6 +250,29 @@ caster.listeners.krypton_skillstatechanged()
 local remove_task = caster._krypton_status_skill_task
 caster.listeners.onremove(caster)
 assert(remove_task.cancelled and caster._krypton_status_skill_task == nil, "removal cancels pending skill wake")
+
+-- Form state comes only from the saved form's own replicated boolean. The
+-- current form remains visible when switching input is temporarily blocked.
+host._krypton_dark_form.data = true
+host.dead, host.tags.playerghost = false, nil
+Status.Sync(host); replicate()
+local form = Status.GetFormRow(Status.GetSnapshot(client), "zh", "KEY_H")
+equal(form.text, "形态 [H]：黑暗", "remote form reads the replicated mode")
+equal(form.state, "dark")
+assert(form.colour[3] > form.colour[2], "dark form has a purple status colour")
+assert(form.tooltip:find("5%", 1, true) and form.tooltip:find("白天回血", 1, true))
+form = Status.GetFormRow(Status.GetSnapshot(client), "en", "KEY_J", { blocked = true })
+equal(form.text, "Form [J]: Dark", "blocked switching never hides the current mode")
+assert(not form.available and form.colour[4] < 1)
+form = Status.GetFormRow(Status.GetSnapshot(client), "en", "disabled")
+equal(form.text, "Form [-]: Dark", "disabled local key does not reset server form")
+assert(not form.available and form.tooltip:find("disabled", 1, true))
+host._krypton_dark_form.data = false
+replicate()
+equal(Status.GetFormRow(Status.GetSnapshot(client), "en", "KEY_K").text, "Form [K]: Normal")
+equal(Status.GetFormRow(Status.GetSnapshot(client), "en", "KEY_H", { form_blocked = true }).available, false)
+equal(Status.GetFormRow({ initialized = false }, "zh").state, "syncing")
+equal(Status.GetFormRow({ initialized = true, alive = false, dark_form = true }, "en").text, "Form [H]: Dark")
 
 Class = function(base, constructor)
     local class = {}; class.__index = class
@@ -295,7 +320,7 @@ AbilityStatus = load_source("mod/scripts/widgets/krypton_ability_status.lua")
 local widget = AbilityStatus(client, { language = "zh" })
 equal(widget.background.clickable, false, "background does not create a click target")
 equal(widget.background.size[1], 250, "preserve panel width")
-equal(widget.background.size[2], 190, "expanded panel fits skill feedback")
+equal(widget.background.size[2], 217, "expanded panel fits skill feedback and mode")
 equal(widget.background.position[2] + widget.background.size[2] / 2, 66, "old panel top edge remains fixed")
 local icon_names = { "flight", "protection", "revival" }
 for i, name in ipairs(icon_names) do
@@ -311,11 +336,20 @@ for i, name in ipairs(icon_names) do
     equal(widget.row_icons[i].tint[1], 1, "preserve generated icon colour")
 end
 equal(widget.events[Status.DIRTY_EVENT].source, client, "widget tracks its owning player")
+equal(widget.events[Status.FORM_DIRTY_EVENT].source, client, "form updates independently of skill flags")
 equal(widget.rows[3].text, Status.GetRows(Status.GetSnapshot(client), "zh")[3].text)
 equal(widget:OnControl("map", true), false, "HUD claims no gameplay control")
 assert(widget.updating and #widget.skill_rows == 2, "only visible HUD starts local availability updates")
 equal(widget.skill_rows[1].region[1], 230, "skill row has no redundant picture or cramped icon column")
 equal(widget.skill_rows[2].position[2], -104, "skill rows fit below original rows")
+equal(widget.form_row.position[2], -131, "form extends downward without moving old skill rows")
+equal(widget.form_row.region[1], 230)
+equal(widget.form_row.text, "形态 [H]：正常")
+client._krypton_dark_form.data = true
+widget.events[Status.FORM_DIRTY_EVENT].fn()
+equal(widget.form_row.text, "形态 [H]：黑暗", "form dirty event refreshes immediately")
+client._krypton_dark_form.data = false
+widget.events[Status.FORM_DIRTY_EVENT].fn()
 host.actual_flying, TUNING.KRYPTON_SURVIVOR.flight_enabled = true, true
 host.periodic[1].fn()
 replicate()
@@ -363,7 +397,7 @@ dedicated = true
 Hud.Install(G, { add_class_post_construct = add_hook })
 equal(#hooks, 0, "dedicated server loads no HUD")
 dedicated = false
-Hud.Install(G, { scale = 1.2, position = "lower", language = "en", heatvision_key = "KEY_G", frostbreath_key = "KEY_C", add_class_post_construct = add_hook })
+Hud.Install(G, { scale = 1.2, position = "lower", language = "en", heatvision_key = "KEY_G", frostbreath_key = "KEY_C", darkform_key = "KEY_K", add_class_post_construct = add_hook })
 equal(hooks[1].path, "widgets/controls")
 local other = { owner = { prefab = "wilson" }, topright_root = setmetatable({ children = {} }, { __index = Widget }) }
 hooks[1].fn(other)
@@ -382,6 +416,7 @@ equal(controls.krypton_ability_status.title.text, "Abilities")
 local panel = controls.krypton_ability_status
 equal(panel.skill_rows[1].text, "Heat [G]: Ready", "installed HUD displays configured heat key")
 equal(panel.skill_rows[2].text, "Frost [C]: Ready", "installed HUD displays configured frost key")
+equal(panel.form_row.text, "Form [K]: Normal", "installed HUD receives actual form key")
 local original_timer = panel.rows[3].text
 for _, set_blocked in ipairs({
     function(value) local_focus = value end,
@@ -391,13 +426,17 @@ for _, set_blocked in ipairs({
     set_blocked(true); panel:OnUpdate(.1)
     equal(panel.skill_rows[1].text, "Heat [G]: Unavailable", "local input state narrows availability promptly")
     equal(panel.rows[3].text, original_timer, "local HUD tick never advances revival clock")
+    assert(not panel._form_model.available, "local input guards also dim form switching")
     set_blocked(false); panel:OnUpdate(.1)
     equal(panel.skill_rows[1].text, "Heat [G]: Ready", "local input restoration does not wait for server polling")
 end
 local_riding = true; panel:OnUpdate(.1)
 equal(panel.skill_rows[2].text, "Frost [C]: Unavailable", "replica riding immediately dims breath")
+assert(panel._form_model.available, "riding alone does not invent a form switching restriction")
 local_riding = false; modifier = true; panel:OnUpdate(.1)
-equal(panel.skill_rows[2].text, "Frost [C]: Unavailable", "modifier guard reflects actual frost input handler")
+equal(panel.skill_rows[1].text, "Heat [G]: Ready", "modifier state keeps heat input available")
+equal(panel.skill_rows[2].text, "Frost [C]: Ready", "modifier state alone does not falsely disable frost")
+assert(panel._form_model.available, "form switching follows the same modifier policy as heat vision")
 modifier = false; panel:OnUpdate(.1)
 equal(panel.skill_rows[2].text, "Frost [C]: Ready")
 client._krypton_status_flags.data = caster._krypton_status_flags:value()
@@ -416,5 +455,73 @@ panel.events[Status.DIRTY_EVENT].fn()
 equal(panel.skill_rows[1].text, "Heat [G]: Ready", "only server completion restores ready")
 hooks[1].fn(controls)
 equal(#controls.topright_root.children, 1, "no duplicate panel")
+
+-- A mode key sends no arguments or local prediction, respects input focus,
+-- and rate limits duplicate requests in simulation time.
+local input_handler = load_source("mod/scripts/krypton_darkform_input.lua")
+local handler, sends, input_now = nil, 0, 10
+local input = { tags = {}, prefab = "krypton_survivor", components = {}, replica = {},
+    valid = true, dead = false, focused = false, hovered = nil, enabled = true,
+    busy = false, working = false, modifier = false }
+function input:IsValid() return self.valid end
+function input:HasTag(tag) return self.tags[tag] == true end
+input.HUD = { HasInputFocus = function() return input.focused end }
+input.components.health = { IsDead = function() return input.dead end }
+input.components.playercontroller = {
+    IsEnabled = function() return input.enabled end,
+    IsBusy = function() return input.busy end,
+    IsDoingOrWorking = function() return input.working end,
+}
+local input_paused, input_dedicated = false, false
+local input_g = { ThePlayer = input, KEY_CTRL = "ctrl", KEY_ALT = "alt", KEY_SHIFT = "shift",
+    IsPaused = function() return input_paused end,
+    GetTime = function() return input_now end,
+    TUNING = { KRYPTON_SURVIVOR = { darkform_toggle_interval = .35 } },
+    TheNet = { IsDedicated = function() return input_dedicated end, IsServerPaused = function() return input_paused end },
+    TheInput = {
+        AddKeyDownHandler = function(_, key, fn) equal(key, "H"); handler = fn end,
+        GetHUDEntityUnderMouse = function() return input.hovered end,
+        IsKeyDown = function() return input.modifier end,
+    },
+}
+local function send(...) equal(select("#", ...), 0, "server decides mode; no client-supplied sanity"); sends = sends + 1 end
+input_handler(input_g, nil, send)
+equal(handler, nil, "disabled form input registers no handler")
+input_dedicated = true; input_handler(input_g, "H", send)
+equal(handler, nil, "dedicated server registers no input")
+input_dedicated = false; input_handler(input_g, "H", send)
+handler(); handler()
+equal(sends, 1, "duplicate key presses inside .35 simulation seconds are limited")
+input_now = input_now + .35; handler()
+equal(sends, 2, "ready at actual simulation interval")
+for _, block in ipairs({
+    function(v) input.tags.playerghost = v end,
+    function(v) input.tags.corpse = v end,
+    function(v) input.tags.busy = v end,
+    function(v) input.dead = v end,
+    function(v) input.focused = v end,
+    function(v) input.hovered = v and {} or nil end,
+    function(v) input.enabled = not v end,
+    function(v) input.busy = v end,
+    function(v) input.working = v end,
+    function(v) input_paused = v end,
+    function(v) input.valid = not v end,
+    function(v) input.components.playercontroller.placer = v and {} or nil end,
+    function(v) input.prefab = v and "wilson" or "krypton_survivor" end,
+}) do
+    input_now = input_now + 1
+    local before = sends
+    block(true); handler(); equal(sends, before, "blocked input sends no mode request")
+    block(false); handler(); equal(sends, before + 1, "cleared guard restores switching")
+end
+input_now = input_now + 1
+input.modifier = true
+local modifier_before = sends
+handler()
+equal(sends, modifier_before + 1, "modifier state alone must not silently swallow form switching")
+input.modifier = false
+input_now = input_now + 1
+input_g.ThePlayer = nil
+local before = sends; handler(); equal(sends, before, "no local player during loading is safe")
 
 print("Ability HUD: server-owned state, remote snapshots, pause, equipment, cooldown, lifecycle and UI contracts passed.")

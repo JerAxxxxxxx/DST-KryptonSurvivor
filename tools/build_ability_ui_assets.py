@@ -49,7 +49,7 @@ def preview_icons(decoded):
 
 
 def preview_hud(decoded):
-    """Show the five-row UI, including short cooldowns and local input states."""
+    """Show the six-row UI, including skill feedback and replicated form."""
     scenarios = [
         ('Ready', ['飞行：已开启', '护符：保护生效', '复活：已就绪'],
          ['Flight: Enabled', 'Amulet: Protected', 'Revive: Ready'], [True, True, True],
@@ -66,6 +66,9 @@ def preview_hud(decoded):
         ('Local keys off', ['飞行：已开启', '护符：保护生效', '复活：已就绪'],
          ['Flight: Enabled', 'Amulet: Protected', 'Revive: Ready'], [True, True, True],
          ['热视线 [-]：按键关闭', '吐息 [-]：按键关闭'], ['Heat [-]: Key off', 'Frost [-]: Key off'], ['key_off', 'key_off']),
+        ('Dark form', ['飞行：已开启', '护符：保护生效', '复活：已就绪'],
+         ['Flight: Enabled', 'Amulet: Protected', 'Revive: Ready'], [True, True, True],
+         ['热视线 [R]：就绪', '吐息 [X]：就绪'], ['Heat [R]: Ready', 'Frost [X]: Ready'], ['ready', 'ready']),
         ('Syncing', ['飞行：同步中…', '护符：同步中…', '复活：同步中…'],
          ['Flight: Syncing...', 'Amulet: Syncing...', 'Revive: Syncing...'], [False, False, False],
          ['热视线 [R]：同步中…', '吐息 [X]：同步中…'], ['Heat [R]: Syncing...', 'Frost [X]: Syncing...'], ['syncing', 'syncing']),
@@ -75,19 +78,19 @@ def preview_hud(decoded):
     skill_fonts = [ImageFont.truetype(zh_font_path, 18), ImageFont.truetype(en_font_path, 18)]
     titles = [ImageFont.truetype(zh_font_path, 23), ImageFont.truetype(en_font_path, 23)]
     label_font = ImageFont.truetype(en_font_path, 14)
-    canvas = Image.new('RGBA', (592, 70 + len(scenarios) * 232), '#34383e')
+    canvas = Image.new('RGBA', (592, 70 + len(scenarios) * 259), '#34383e')
     draw = ImageDraw.Draw(canvas)
     draw.text((296, 18), 'UI composition preview - not a game screenshot',
               fill='#eeeeee', font=label_font, anchor='mt')
     colors = ['#66c2ff', '#75e897', '#75e897']
     panels = []
     for index, (label, zh, en, enabled, skills_zh, skills_en, states) in enumerate(scenarios):
-        top = 70 + index * 232
+        top = 70 + index * 259
         for column, texts in enumerate([zh, en]):
             left = 30 + column * 282
             draw.text((left, top - 23), label + (' / ZH' if column == 0 else ' / EN'),
                       fill='#eeeeee', font=label_font)
-            draw.rectangle((left, top, left + 249, top + 189), fill=(14, 17, 20, 255))
+            draw.rectangle((left, top, left + 249, top + 216), fill=(14, 17, 20, 255))
             draw.text((left + 10, top + 22), '超能力' if column == 0 else 'Abilities',
                       fill='#e8e0c7', font=titles[column], anchor='lm')
             for row, (name, icon) in enumerate(decoded.items()):
@@ -113,23 +116,39 @@ def preview_hud(decoded):
                 ImageDraw.Draw(layer).text((left + 10, top + 143 + row * 27), text,
                                            fill=rgba, font=skill_fonts[column], anchor='lm')
                 canvas.alpha_composite(layer)
+            form_key = 'K' if label == 'Custom keys / unavailable' else ('-' if label == 'Local keys off' else 'H')
+            form_dark = label in ('Dark form', 'Casting / cooldown')
+            form_state = ('同步中…' if column == 0 else 'Syncing...') if label == 'Syncing' else (
+                ('黑暗' if column == 0 else 'Dark') if form_dark else ('正常' if column == 0 else 'Normal'))
+            form_text = f'形态 [{form_key}]：{form_state}' if column == 0 else f'Form [{form_key}]: {form_state}'
+            assert draw.textlength(form_text, font=skill_fonts[column]) <= 230, \
+                f'Preview form text overflows row region: {form_text}'
+            form_rgba = (196, 153, 255, 255) if form_dark else (232, 224, 199, 255)
+            if label == 'Syncing':
+                form_rgba = (166, 171, 179, 255)
+            if label in ('Syncing', 'Local keys off', 'Custom keys / unavailable'):
+                form_rgba = (*form_rgba[:3], 191)
+            layer = Image.new('RGBA', canvas.size)
+            ImageDraw.Draw(layer).text((left + 10, top + 197), form_text,
+                                      fill=form_rgba, font=skill_fonts[column], anchor='lm')
+            canvas.alpha_composite(layer)
             if index == 1:
-                panels.append(canvas.crop((left, top, left + 250, top + 190)))
+                panels.append(canvas.crop((left, top, left + 250, top + 217)))
     canvas.convert('RGB').save(PREVIEWS / 'ability-status-ui-composition.png')
     # Show both languages with the longest revival timer and new skill states
     # at all three supported HUD scales. These are decoded UI pixel composites.
     scales = (.8, 1, 1.2)
-    scaled = Image.new('RGBA', (846, 572), '#34383e')
+    scaled = Image.new('RGBA', (846, 636), '#34383e')
     scale_draw = ImageDraw.Draw(scaled)
     scale_draw.text((423, 14), 'UI scale composition: 80% / 100% / 120% (not a game screenshot)',
                     fill='#eeeeee', font=label_font, anchor='mt')
     for column, scale in enumerate(scales):
         x = 24 + sum(round(250 * previous) + 24 for previous in scales[:column])
         for row, panel in enumerate(panels):
-            y = 55 + row * 258
+            y = 55 + row * 290
             scale_draw.text((x, y - 20), f'{"ZH" if row == 0 else "EN"} {round(scale * 100)}%',
                             fill='#eeeeee', font=label_font)
-            scaled.alpha_composite(panel.resize((round(250 * scale), round(190 * scale)),
+            scaled.alpha_composite(panel.resize((round(250 * scale), round(217 * scale)),
                                                  Image.Resampling.LANCZOS), (x, y))
     scaled.convert('RGB').save(PREVIEWS / 'ability-status-ui-scale-preview.png')
 

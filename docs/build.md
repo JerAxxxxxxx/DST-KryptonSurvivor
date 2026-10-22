@@ -2,7 +2,7 @@
 
 仓库中的 `mod/` 已包含编译资源，可直接安装。修改 Lua 只需 Node.js；重新处理图片和生成预览还需要 Python 与本机安装的《饥荒联机版》。
 
-当前代码版本为 **0.9.0**，技能反馈已通过游戏测试，联机保护专项待测；Steam 创意工坊仍为 **0.8.2**，暂不更新。本轮增加技能按键与状态反馈、热视线点燃开关、统一友方保护，以及独立资源自动检查。
+当前代码与 Steam 创意工坊版本均为 **0.11.0**。本次工坊更新累计覆盖0.8.2之后的黑暗形态、技能反馈、友方保护、吐息修复与服务器数值配置，详见[更新记录](changelog.md)。
 
 ## 环境
 
@@ -153,6 +153,28 @@ python tools/preview_frostbreath.py --game-dir "你的饥荒联机版安装目�
 该工具从编译后的角色包和本机原版站立／跑步动作读取像素与矩阵，在内存中合成原版冰晶，输出 `build/previews/frostbreath-mouths.png`、`frostbreath-mouths.json`，以及 `frostbreath-idle_loop-*.gif`、`frostbreath-run_loop-*.gif`。预览包括正面、左右侧面和背面；嘴部标记与放大框仅用于核对坐标。
 
 **这是编译像素与几何示意，不是真实游戏画面。** 工具读取原版冷气纹理和粒子参数用于核验，但不模拟 GPU 冷雾、泛光、深度排序或游戏摄像机投影。应在游戏中确认实际发射位置、雾效与遮挡。原生源码、动画和贴图仅从用户安装目录读取，不写出或随 Mod 分发。
+
+0.10.2吐息特效读取服务器同步的施放方向，客户端不再把预测的Transform朝向短暂不同作为永久中断。服务器Pulse保留0.2秒方向与资格检查，真实转身时删除代理；本机忙碌、死亡、皮肤及动作中断仍及时清理。
+
+`preview_frostbreath_heads.py`额外输出 `frostbreath-head-direction-coverage.png` 与JSON，枚举8个世界瞄准角×4种原生渲染姿态。它复用编译像素，仅作正交嘴部／冰晶几何诊断，特意把姿态与方向独立；不模拟GPU雾、真实相机投影或深度排序。原四向288帧预览继续保留。
+
+## 黑暗形态
+
+`krypton_darkform.lua`在common阶段声明独立net_bool，组件`krypton_darkform`只在服务器创建并保存dark和normal_percent。H/J/K输入与现有RPC命名空间使用同一已归一化配置；X/H在0.10.1中与R保持相同修饰键策略，不再仅因Ctrl/Alt/Shift状态就拒绝发送或让吐息变灰；界面焦点、鼠标悬UI、暂停、忙碌与服务器资格检查保留。服务器校验实际角色、控制器、状态与0.35秒间隔，客户端不自行改变形态。
+
+组件通过原生GetRealPercent快照、SetPercent校正至5%，遵守有效上限、ignore／redirect与外部强制理智效果。sanitydelta仅排入去重0延时任务，避开DoDelta尾部状态收尾的重入；仅黑暗状态有1秒兜底任务，退出／移除会取消。OnLoad等所有组件加载后校正，复活后同样延后；死亡或幽灵不强制覆盖。原来的白天恢复任务仅在黑暗时跳过sanity分支，健康分支不变。
+
+普通理智模式的5%低于原生疯狂阈值；月岛等启蒙来源与sanitymode不改写，原版影怪刷新与可见／可交互规则保留。面板增加独立形态行，监听同一个net_bool的dirty事件；原三行及R/X位置不变。UI builder重建预览时不重画角色或更改编译美术。
+
+`tests/darkform.lua`运行实际模块及组件，覆盖理智正负变化、原生限制兼容、保存加载顺序、ghost／corpse／复活、切换恢复、权限、暂停与任务清理；`smoke.lua`验证实际prefab白天回血／回理智分支与modmain配置，`status_hud.lua`覆盖新输入与远端显示。
+
+## 服务器数值配置与恢复
+
+`krypton_config.lua`统一校验modmain使用的八项数字：新攻击距离／范围半径／吐息冷量／两种白天恢复，以及原伤害与移速选项。仅接受菜单列出的有限number，缺失或错误类型／NaN／无穷／越界返回既有默认；合法0仅用于关闭对应恢复或范围伤害。`tests/configuration.lua`加载实际modinfo，逐项检查菜单与验证表一致；烟测再执行真实modmain及prefab消费非默认值。
+
+范围伤害0不进行FindEntities，仍保留原主目标攻击；原生weapon:SetRange的attackrange属性钩子通过inventoryitem classified同步客户端，因此无需新增预测netvar。吐息仍使用原生AddColdness并保留目标抗性。
+
+两种恢复独立为0时跳过对应DoDelta，双0不创建恢复任务；正常形态仅在GetRealPercent低于1-GetPenaltyPercent的有效上限时恢复理智，避免每秒对满值发出sanitydelta。黑暗优先级、地表白天、生存及暂停语义保留，生命恢复仍使用原生健康组件。
 
 ## 检查
 

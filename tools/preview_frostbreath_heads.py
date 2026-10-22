@@ -7,6 +7,7 @@ read in memory, never copied into the distributable mod or exported as assets.
 """
 import hashlib
 import json
+import math
 import re
 from pathlib import Path
 
@@ -138,7 +139,8 @@ def main():
     sheet = Image.new("RGB", (cell[0] * 4, cell[1] * 4 + 40), BACKGROUND[:3])
     ImageDraw.Draw(sheet).text((10, 10), report["notice"], font=font(17), fill=(35, 50, 55))
 
-    def render(animation, index, label, mirrored, direction, breathing):
+    def render(animation, index, label, mirrored, direction, breathing,
+               aim_degrees=None, overlay_crystals=False):
         pose = label.split("_")[0]
         canvas = Image.new("RGBA", SIZE, BACKGROUND)
         character_layer = Image.new("RGBA", SIZE)
@@ -178,6 +180,7 @@ def main():
                 warp(character_layer, *sprite, multiply(scene, element[3:9]))
         assert head_matrix is not None and mouth is not None, "Native headbase must remain visible"
         crystals = Image.new("RGBA", SIZE)
+        crystal_records = []
         if breathing:
             dx, dy = direction
             for lane in range(3):
@@ -189,7 +192,9 @@ def main():
                 scale = .11 + phase * .12
                 render_fx(crystals, flakes, flake_animation, index,
                           (scale, 0, 0, scale, x, y), ((.68, .9, 1, .6), (0, 0, 0, 0)))
-        if pose == "back":
+                crystal_records.append({"position_canvas": [x, y], "forward_pixels": distance,
+                                        "lateral_pixels": spread, "source": "native ice pixels"})
+        if pose == "back" and not overlay_crystals:
             canvas.alpha_composite(crystals)
             canvas.alpha_composite(character_layer)
         else:
@@ -199,14 +204,19 @@ def main():
         if breathing and pose != "back":
             x, y = mouth
             draw.ellipse((x - 3, y - 3, x + 3, y + 3), outline=(0, 120, 170), width=1)
-        draw.text((12, 12), f"{animation['name']} / {label} / {'breath' if breathing else 'normal'}",
+        title = f"{animation['name']} / {label} / {'breath' if breathing else 'normal'}"
+        if aim_degrees is not None:
+            title = f"Server aim {aim_degrees:03d} deg / rendered {label}"
+        draw.text((12, 12), title,
                   font=font(20), fill=(35, 50, 55))
         draw.text((12, 40), "Cyan circle = calibrated mouth; held axe uses existing compiled pixels",
                   font=font(15), fill=(35, 65, 80))
         record = {"native_frame": index % len(animation["frames"]), "breathing": breathing,
                   "head_override": chosen["symbol"] if chosen else None,
                   "mouth_canvas": list(mouth), "head_matrix": list(head_matrix),
-                  "head_symbol_frames": head_records}
+                  "head_symbol_frames": head_records,
+                  "emission_direction_projected": list(direction),
+                  "crystals": crystal_records}
         record.update(next(item for item in head_records if item["target_symbol"] == "headbase"))
         return canvas.convert("RGB").resize(cell, Image.Resampling.LANCZOS), record
 
@@ -230,9 +240,63 @@ def main():
     report["native_head_coverage"] = validate_native_head_coverage(game, config, heads)
     sheet.save(PREVIEWS / "frostbreath-head-comparison.png")
     (PREVIEWS / "frostbreath-head-comparison.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf8")
+
+    # Keep aim independent from the rendered body. Native clients can briefly
+    # display a previous pose while the cast direction has already replicated.
+    # This grid is deliberately not an engine-camera conversion or a claim
+    # about real GPU visibility/depth: it checks compiled mouths and vectors.
+    angles = tuple(range(0, 360, 45))
+    directions = {"notice": "Orthographic compiled-pixel direction diagnostic, not a game screenshot. "
+                            "GPU mist, the engine camera and real depth sorting are not simulated.",
+                  "layout": "Rows: rendered front / right / left / back. Columns: server aim 0..315 in 45-degree steps.",
+                  "projection": "Diagram x = world x; diagram y = world z. Pose is independent of aim. "
+                                "Rows are native four-way body poses, not inferred camera headings.",
+                  "ice_overlay": "Native ice pixels are overlaid above the body for diagnostic visibility only.",
+                  "source_sha256": source_hash, "native_files_distributed": False,
+                  "gpu_mist_simulated": False, "camera_simulated": False, "depth_simulated": False,
+                  "records": []}
+    direction_sheet = Image.new("RGB", (cell[0] * len(angles), cell[1] * len(POSES) + 76), BACKGROUND[:3])
+    heading = ImageDraw.Draw(direction_sheet)
+    heading.text((10, 8), directions["notice"], font=font(17), fill=(35, 50, 55))
+    heading.text((10, 34), "Aim and rendered pose vary independently; cyan circle = mouth. "
+                 "Native ice pixels overlay the body only in this geometry grid.",
+                 font=font(17), fill=(35, 50, 55))
+    for row, (label, facing, mirrored, _) in enumerate(POSES):
+        animation = next(item for item in animations
+                         if item["name"] == "idle_loop" and item["facing"] == facing)
+        baseline_mouth = None
+        for column, degrees in enumerate(angles):
+            theta = math.radians(degrees)
+            projected = (math.cos(theta), -math.sin(theta))
+            image, record = render(animation, 10, label, mirrored, projected, True,
+                                   aim_degrees=degrees, overlay_crystals=True)
+            assert len(record["crystals"]) == 3, "Each direction must emit the existing ice pixels"
+            if baseline_mouth is None:
+                baseline_mouth = record["mouth_canvas"]
+            assert record["mouth_canvas"] == baseline_mouth, "Aim must not move the rendered pose's mouth anchor"
+            assert (record["head_override"] is None) == (label == "back"), "Only supplied front/profile heads may override"
+            for crystal in record["crystals"]:
+                ox = crystal["position_canvas"][0] - record["mouth_canvas"][0]
+                oy = crystal["position_canvas"][1] - record["mouth_canvas"][1]
+                forward = ox * projected[0] + oy * projected[1]
+                lateral = -ox * projected[1] + oy * projected[0]
+                assert abs(forward - crystal["forward_pixels"]) < .000001
+                assert abs(lateral - crystal["lateral_pixels"]) < .000001
+                assert forward > 0, "Crystals must extend from the mouth in the server's forward direction"
+            record.update({"server_angle_degrees": degrees, "world_direction": list(projected),
+                           "rendered_pose": label, "native_facing_mask": facing, "mirrored": mirrored,
+                           "crystals_overlaid_for_visibility": True})
+            directions["records"].append(record)
+            direction_sheet.paste(image, (column * cell[0], row * cell[1] + 76))
+    assert len(directions["records"]) == 32
+    direction_sheet.save(PREVIEWS / "frostbreath-head-direction-coverage.png")
+    (PREVIEWS / "frostbreath-head-direction-coverage.json").write_text(
+        json.dumps(directions, indent=2) + "\n", encoding="utf8")
     assert hashlib.sha256(source.read_bytes()).hexdigest() == source_hash
     print(f"Rendered {rendered} decoded native-motion frames: four-direction normal/breath comparisons and 8 transition GIFs.")
+    print("Validated 32 independent server-aim/rendered-pose combinations, including every 45-degree diagonal.")
     print(PREVIEWS / "frostbreath-head-comparison.png")
+    print(PREVIEWS / "frostbreath-head-direction-coverage.png")
 
 
 if __name__ == "__main__":

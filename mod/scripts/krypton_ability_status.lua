@@ -127,6 +127,9 @@ function Status.GetSnapshot(inst)
         frost_cooldown = HasFlag(flags, FLAGS.FROST_COOLDOWN),
         frost_casting = HasFlag(flags, FLAGS.FROST_CASTING),
         frost_enabled = HasFlag(flags, FLAGS.FROST_ENABLED),
+        -- The saved form owns its own boolean netvar; do not spend the last
+        -- status bit or infer the mode from a client's local sanity value.
+        dark_form = inst._krypton_dark_form ~= nil and inst._krypton_dark_form:value() or false,
         cooldown = inst._krypton_status_cooldown:value(),
     }
 end
@@ -134,11 +137,41 @@ end
 local COLOURS = {
     blue = { .40, .76, 1, 1 }, green = { .46, .91, .59, 1 },
     grey = { .65, .67, .70, 1 }, amber = { 1, .79, .39, 1 },
+    purple = { .77, .60, 1, 1 }, neutral = { .91, .88, .78, 1 },
 }
 
 local function KeyLabel(value, fallback)
     if value == "disabled" then return "-", false end
     return type(value) == "string" and value:match("^KEY_([A-Z])$") or fallback, true
+end
+
+function Status.GetFormRow(snapshot, language, key_name, context)
+    local zh = language == "zh"
+    local key, key_enabled = KeyLabel(key_name, "H")
+    context = context or {}
+    local initialized = snapshot.initialized
+    local dark = snapshot.dark_form == true
+    local state = not initialized and "syncing" or (dark and "dark" or "normal")
+    local label = not initialized and (zh and "同步中…" or "Syncing...")
+        or (dark and (zh and "黑暗" or "Dark") or (zh and "正常" or "Normal"))
+    local available = initialized and snapshot.alive and key_enabled
+        and not context.blocked and not context.form_blocked
+    local base = COLOURS[not initialized and "grey" or (dark and "purple" or "neutral")]
+    local tooltip = zh
+        and "黑暗超人将理智维持在5%，停止白天自动回理智；白天回血与其它能力保持不变。\n切回正常形态时恢复进入前的理智比例，再按正常规则恢复。\n遵循原版理智／启蒙机制；月岛等启蒙区域不会因此出现普通理智影怪。"
+        or "Dark form maintains 5% sanity and pauses daytime sanity recovery. Daytime healing and other abilities remain unchanged.\nReturning to normal restores the sanity percentage saved on entry, then normal recovery resumes.\nNative sanity and enlightenment rules still apply; this does not summon normal sanity monsters in enlightenment areas such as the Lunar Island."
+    tooltip = tooltip .. (key_enabled
+        and (zh and ("\n按 " .. key .. " 切换形态；可在本机模组配置中改键。")
+            or ("\nPress " .. key .. " to switch forms; change the key in local mod settings."))
+        or (zh and "\n本机切换按键已关闭；当前形态保持不变。"
+            or "\nThe local toggle key is disabled; the current form is unchanged."))
+    if initialized and key_enabled and not available then
+        tooltip = tooltip .. (zh and "\n当前暂不可切换，请结束动作、关闭界面或取消暂停。"
+            or "\nSwitching is temporarily unavailable; finish the action, close interfaces or unpause.")
+    end
+    return { key = "form", state = state, available = available,
+        text = (zh and "形态 [" or "Form [") .. key .. (zh and "]：" or "]: ") .. label,
+        colour = { base[1], base[2], base[3], available and 1 or .75 }, tooltip = tooltip }
 end
 
 function Status.GetSkillRows(snapshot, language, keys, context)
@@ -240,4 +273,5 @@ function Status.GetRows(snapshot, language)
 end
 
 Status.DIRTY_EVENT = DIRTY_EVENT
+Status.FORM_DIRTY_EVENT = "krypton_darkformdirty"
 return Status

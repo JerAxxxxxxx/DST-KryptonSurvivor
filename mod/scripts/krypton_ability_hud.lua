@@ -22,12 +22,8 @@ local function LocalSkillContext(G, owner)
         or (owner.replica ~= nil and owner.replica.health) or nil
     if health ~= nil and health:IsDead() then context.blocked = true end
     context.frost_blocked = rider ~= nil and rider:IsRiding()
-    if G.TheInput ~= nil and G.TheInput.IsKeyDown ~= nil then
-        for _, name in ipairs({ "KEY_CTRL", "KEY_ALT", "KEY_SHIFT" }) do
-            local key = G[name]
-            if key ~= nil and G.TheInput:IsKeyDown(key) then context.frost_blocked = true end
-        end
-    end
+    -- Follow the actual shortcut handlers. Only riding adds a frost-specific
+    -- restriction; modifier flags must not invent unavailable skill states.
     return context
 end
 
@@ -51,6 +47,7 @@ function Hud.Install(G, options)
             language = options.language,
             heatvision_key = options.heatvision_key,
             frostbreath_key = options.frostbreath_key,
+            darkform_key = options.darkform_key,
             get_skill_context = function() return LocalSkillContext(G, owner) end,
         }
         local panel = controls.topright_root:AddChild(AbilityStatus(owner, panel_options))

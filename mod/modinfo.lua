@@ -1,7 +1,7 @@
 name = "Krypton Survivor · 氪星幸存者"
-description = "超人测试版 / Superman prototype\n飞行（默认 V）、Ctrl＋地图右键瞬移、热视线（R）、冰冻吐息（X）、能力状态面板、拉奥之锋、星核护符、完整夜视和白天恢复。\nFlight (V), Ctrl + map right-click teleport, heat vision (R), frost breath (X), ability HUD, Rao's Edge, Starcore Amulet, night vision and daytime recovery."
+description = "超人测试版 / Superman prototype\n黑暗形态切换（默认 H）、飞行（默认 V）、Ctrl＋地图右键瞬移、热视线（R）、冰冻吐息（X）、能力状态面板、拉奥之锋、星核护符、完整夜视和白天恢复。\nDark form toggle (H), flight (V), Ctrl + map right-click teleport, heat vision (R), frost breath (X), ability HUD, Rao's Edge, Starcore Amulet, night vision and daytime recovery."
 author = "Krypton Survivor Project"
-version = "0.9.0"
+version = "0.11.0"
 api_version = 10
 dst_compatible = true
 dont_starve_compatible = false
@@ -12,6 +12,81 @@ all_clients_require_mod = true
 server_filter_tags = { "character", "Krypton Survivor" }
 
 configuration_options = {
+    {
+        name = "staff_range",
+        label = "战斧攻击距离 / Axe attack range",
+        hover = "服务器统一近战距离，默认6。 / Server-wide melee reach; default 6.",
+        options = {
+            { description = "3", data = 3 },
+            { description = "6", data = 6 },
+            { description = "10", data = 10 },
+            { description = "16", data = 16 },
+        },
+        default = 6,
+    },
+    {
+        name = "staff_aoe_radius",
+        label = "战斧范围伤害半径 / Axe splash radius",
+        hover = "服务器统一；0关闭范围伤害，保留主目标攻击。默认5。 / Server-wide; 0 disables splash, keeping the primary hit. Default 5.",
+        options = {
+            { description = "0：关闭 / Off", data = 0 },
+            { description = "3", data = 3 },
+            { description = "5", data = 5 },
+            { description = "8", data = 8 },
+            { description = "12", data = 12 },
+        },
+        default = 5,
+    },
+    {
+        name = "frostbreath_coldness",
+        label = "吐息冷量 / Frost breath coldness",
+        hover = "服务器统一每次吐息冷量，保留原生怪物抗性。默认2。 / Server-wide coldness per cast; native resistance applies. Default 2.",
+        options = {
+            { description = "1", data = 1 },
+            { description = "2", data = 2 },
+            { description = "4", data = 4 },
+            { description = "8", data = 8 },
+        },
+        default = 2,
+    },
+    {
+        name = "daylight_health_regen",
+        label = "白天回血 / Daytime health recovery",
+        hover = "服务器统一每模拟秒恢复量，仅地表白天；0关闭。默认100。 / Server-wide health per simulation second, surface daytime only; 0 disables. Default 100.",
+        options = {
+            { description = "0：关闭 / Off", data = 0 },
+            { description = "10 / 秒 / sec", data = 10 },
+            { description = "50 / 秒 / sec", data = 50 },
+            { description = "100 / 秒 / sec", data = 100 },
+            { description = "500 / 秒 / sec", data = 500 },
+        },
+        default = 100,
+    },
+    {
+        name = "daylight_sanity_regen",
+        label = "白天回理智 / Daytime sanity recovery",
+        hover = "服务器统一每模拟秒恢复量，仅正常形态地表白天；0关闭。黑暗形态仍维持低理智。默认100。 / Server-wide sanity per simulation second, normal form in surface daytime; 0 disables. Dark form stays low. Default 100.",
+        options = {
+            { description = "0：关闭 / Off", data = 0 },
+            { description = "10 / 秒 / sec", data = 10 },
+            { description = "50 / 秒 / sec", data = 50 },
+            { description = "100 / 秒 / sec", data = 100 },
+            { description = "500 / 秒 / sec", data = 500 },
+        },
+        default = 100,
+    },
+    {
+        name = "darkform_key",
+        label = "黑暗形态按键 / Dark form key",
+        options = {
+            { description = "H", data = "KEY_H" },
+            { description = "J", data = "KEY_J" },
+            { description = "K", data = "KEY_K" },
+            { description = "关闭按键 / Disable key", data = "disabled" },
+        },
+        default = "KEY_H",
+        client = true,
+    },
     {
         name = "frostbreath_enabled",
         label = "冰冻吐息能力 / Frost breath",

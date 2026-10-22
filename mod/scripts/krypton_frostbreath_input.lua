@@ -9,10 +9,8 @@ return function(G, key, send)
             or G.TheInput:GetHUDEntityUnderMouse() ~= nil then
             return
         end
-        if G.TheInput.IsKeyDown ~= nil and
-            ((G.KEY_CTRL ~= nil and G.TheInput:IsKeyDown(G.KEY_CTRL))
-                or (G.KEY_ALT ~= nil and G.TheInput:IsKeyDown(G.KEY_ALT))
-                or (G.KEY_SHIFT ~= nil and G.TheInput:IsKeyDown(G.KEY_SHIFT))) then return end
+        -- Match heat vision: modifier state alone must not silently swallow
+        -- this shortcut. Chat, UI focus and unsafe actions are guarded above.
         local rider = player.replica ~= nil and player.replica.rider or nil
         if rider ~= nil and rider:IsRiding() then return end
         local controller = player.components.playercontroller

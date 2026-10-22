@@ -296,6 +296,17 @@ boss.components.freezable.redirected = true
 equal(FrostBreath.Cast(player(), 1, 0), true)
 equal(boss.components.freezable.coldness, old_coldness, "native redirect remains effective")
 
+for _, coldness in ipairs({ 1, 4, 8 }) do
+    TUNING.KRYPTON_SURVIVOR.frostbreath_coldness = coldness
+    local target, actor = entity(4), player()
+    targets = { target }
+    equal(FrostBreath.Cast(actor, 1, 0), true, "configured coldness permits the ordinary cast")
+    equal(target.components.freezable.amount, coldness, "selected coldness reaches native AddColdness")
+    equal(target.components.freezable.duration, 4, "coldness settings leave native freeze duration unchanged")
+    actor._krypton_frostbreath_channel.stop()
+end
+TUNING.KRYPTON_SURVIVOR.frostbreath_coldness = 2
+
 local register_input = load_source("mod/scripts/krypton_frostbreath_input.lua")
 local function input_fixture()
     local G = { TUNING = TUNING, ThePlayer = player(), time = 40, paused = false, sent = {},
@@ -331,9 +342,6 @@ for _, modify in ipairs({
     function(G) G.TheNet.paused = true end,
     function(G) G.TheInput.hud = {} end,
     function(G) G.TheInput.position = nil end,
-    function(G) G.TheInput.modifier = G.KEY_CTRL end,
-    function(G) G.TheInput.modifier = G.KEY_ALT end,
-    function(G) G.TheInput.modifier = G.KEY_SHIFT end,
     function(G) G.ThePlayer.components.playercontroller = nil end,
     function(G) G.ThePlayer.components.playercontroller.enabled = false end,
     function(G) G.ThePlayer.components.playercontroller.busy = true end,
@@ -344,6 +352,14 @@ for _, modify in ipairs({
     local G = input_fixture(); register_input(G, 120, G.send); modify(G); G.TheInput.handler()
     equal(#G.sent, 0, "UI/chat/busy/mount guard suppresses ability RPC")
 end
+for _, key in ipairs({ 401, 400, 402 }) do
+    local modified = input_fixture()
+    register_input(modified, 120, modified.send)
+    modified.TheInput.modifier = key
+    modified.TheInput.handler()
+    equal(#modified.sent, 1, "modifier state alone must not silently lock frost while heat vision works")
+    equal(modified.sent[1].x, 7); equal(modified.sent[1].z, -3)
+end
 local G = input_fixture(); register_input(G, 120, G.send); G.TheInput.handler()
 equal(#G.sent, 1, "valid hotkey sends mouse position")
 equal(G.sent[1].x, 7); equal(G.sent[1].z, -3)
@@ -352,8 +368,9 @@ G.time = 41.2; G.TheInput.handler(); equal(#G.sent, 2, "input available at inter
 
 -- Observers build native mouth-anchored mist locally; only the cast identity
 -- and direction are replicated. No native animation files are copied.
-FACING_DOWN, FACING_RIGHT, FACING_LEFT = 1, 2, 3
-FACING_UP, FACING_UPRIGHT, FACING_UPLEFT = 4, 5, 6
+-- Match the installed game constants, including camera-relative diagonals.
+FACING_RIGHT, FACING_UP, FACING_LEFT, FACING_DOWN = 0, 1, 2, 3
+FACING_UPRIGHT, FACING_UPLEFT, FACING_DOWNRIGHT, FACING_DOWNLEFT = 4, 5, 6, 7
 -- Native GetSymbolOverride returns numeric build/symbol hashes, as used by
 -- balloon_held_child's net_hash fields. Restoration accepts either hash/name.
 local hash_values, hash_names, next_hash = {}, {}, 100
@@ -606,12 +623,92 @@ head_pose(actor, nil)
 TheNet.dedicated = false
 TheWorld.ismastersim = false
 
-local function observer_cast(source, started)
+local function observer_cast(source, started, angle)
     local fx = fx_prefab.fn()
-    fx._caster:set(source); fx._angle:set(0); fx._started:set(started or now)
+    fx._caster:set(source); fx._angle:set(angle or 0); fx._started:set(started or now)
     updater(fx)
     return fx
 end
+
+-- The server owns the cast angle. An observer's camera-facing selection and
+-- predicted/world rotation can arrive in a different frame from the cast
+-- identity. These rendering inputs must never silently cancel a valid cast.
+local function expected_head(facing)
+    if facing == FACING_RIGHT or facing == FACING_LEFT then return "side" end
+    if facing == FACING_UP or facing == FACING_UPRIGHT or facing == FACING_UPLEFT then return nil end
+    return "front"
+end
+local function forward_particles(mist, from, angle)
+    local dx, dz = math.cos(angle * DEGREES), -math.sin(angle * DEGREES)
+    for index = from, #mist.particles do
+        local particle = mist.particles[index]
+        local vx, vz = particle[6], particle[8]
+        local forward, lateral = vx * dx + vz * dz, vx * -dz + vz * dx
+        assert(forward > 0, "mist follows the authoritative cast direction, not a stale body rotation")
+        assert(math.abs(lateral) <= forward * math.tan(28 * DEGREES) + .000001,
+            "all new particles remain inside the authoritative cone")
+    end
+end
+for _, angle in ipairs({ 0, 45, 90, 135, 180, 225, 270, 315 }) do
+    for _, facing in ipairs({ FACING_DOWN, FACING_RIGHT, FACING_UP, FACING_LEFT }) do
+        local p = visual_actor()
+        p.facing = facing
+        p.rotation = (angle + 90) % 360 -- predicted rotation is one update behind
+        local fx = observer_cast(p, now, angle)
+        assert(fx._mist ~= nil, "eight-direction cast must render before observer rotation catches up")
+        head_pose(p, expected_head(facing))
+        equal(#fx._flakes, 8, "every cardinal/diagonal cast retains all ice crystals")
+        equal(#fx._mist.particles, 2, "diagonal emission retains the same per-update budget")
+        forward_particles(fx._mist, 1, angle)
+        local first_mist, first_flakes = fx._mist, fx._flakes
+        local previous_count = #first_mist.particles
+        -- A transient client-side turn, followed by synchronization, must not
+        -- poison the expression token or recreate the whole effect.
+        now = now + FRAMES + .001
+        p.rotation = (angle + 180) % 360
+        updater(fx)
+        assert(not fx._krypton_breath_stopped, "predicted rotation must not permanently stop a valid expression")
+        equal(fx._mist, first_mist, "predicted rotation does not remove the native mist emitter")
+        equal(fx._flakes, first_flakes, "predicted rotation keeps the bounded crystal list")
+        head_pose(p, expected_head(facing))
+        forward_particles(first_mist, previous_count + 1, angle)
+        now = now + FRAMES + .001
+        p.rotation = angle
+        updater(fx)
+        equal(fx._mist, first_mist, "effects remain active when rotation synchronization completes")
+        head_pose(p, expected_head(facing))
+        fx:Remove()
+        head_pose(p, nil)
+        assert(not first_mist.valid, "authoritative proxy removal clears diagonal mist")
+        for _, crystal in ipairs(first_flakes) do
+            assert(not crystal.fx.valid, "authoritative proxy removal clears diagonal ice crystals")
+        end
+    end
+end
+
+-- The caster can be resolved before its angle packet. A later diagonal cast
+-- angle plus one stale predicted turn must not permanently disable its head.
+local async_actor = visual_actor()
+local async_fx = observer_cast(async_actor)
+local async_mist, async_flakes = async_fx._mist, async_fx._flakes
+head_pose(async_actor, "front")
+now = now + FRAMES + .001
+async_fx._angle:set(45)
+async_actor.rotation = 180
+local async_count = #async_mist.particles
+updater(async_fx)
+equal(async_fx._mist, async_mist, "late angle replication keeps an already established cast visible")
+equal(async_fx._flakes, async_flakes, "late angle replication reuses crystals")
+assert(not async_fx._krypton_breath_stopped, "a transient rotation disagreement cannot poison the expression token")
+head_pose(async_actor, "front")
+forward_particles(async_mist, async_count + 1, 45)
+now = now + FRAMES + .001
+async_actor.rotation, async_actor.facing = 45, FACING_RIGHT
+updater(async_fx)
+head_pose(async_actor, "side")
+equal(async_fx._mist, async_mist, "camera-facing changes only reselect the mouth/head pose")
+async_fx:Remove(); head_pose(async_actor, nil)
+assert(not async_mist.valid, "server removal still ends asynchronously replicated effects")
 
 -- Every replicated native action and lifecycle interrupt releases our own
 -- expression. No body clips, foods, held items or skin builds are replaced.
@@ -628,7 +725,6 @@ for _, modify in ipairs({
     function(p) p.animation = "chop_pre" end,
     function(p) p.animation = "mine" end,
     function(p) p.animation = "dig" end,
-    function(p) p.rotation = 180 end,
     function(p) p.valid = false end,
 }) do
     local p = visual_actor()
@@ -737,4 +833,4 @@ for _, eating_first in ipairs({ true, false }) do
     fx:Remove()
 end
 
-print("Frost breath tests passed: authority, cone edges, protected targets, native freezing and fire safety, RPC guards, authored open-mouth origins, mirrored/front/back poses, lifecycle/skin cleanup, concurrent casts, real eating handoff and dedicated-server isolation.")
+print("Frost breath tests passed: authority, cone edges, protected targets, native freezing and fire safety, RPC guards, authored open-mouth origins, eight-direction/camera/prediction parity, mirrored/front/back poses, lifecycle/skin cleanup, concurrent casts, real eating handoff and dedicated-server isolation.")

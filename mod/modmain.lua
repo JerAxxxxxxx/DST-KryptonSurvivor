@@ -1,4 +1,5 @@
 local G = GLOBAL
+local Config = require("krypton_config")
 local language = GetModConfigData("language") or "auto"
 if language == "auto" then
     local locale = G.LanguageTranslator and G.LanguageTranslator.defaultlang or "en"
@@ -9,14 +10,16 @@ G.TUNING.KRYPTON_SURVIVOR = {
     health = 10000,
     hunger = 10000,
     sanity = 10000,
-    speed = GetModConfigData("speed_multiplier") or 1.5,
-    staff_damage = GetModConfigData("staff_damage") or 2000,
+    speed = Config.Number("speed_multiplier", GetModConfigData),
+    staff_damage = Config.Number("staff_damage", GetModConfigData),
     work_efficiency = 10,
-    staff_range = 6,
-    staff_aoe_radius = 5,
-    daylight_sanity_regen = 100,
-    daylight_health_regen = 100,
-    heatvision_damage = GetModConfigData("heatvision_damage") or 2000,
+    staff_range = Config.Number("staff_range", GetModConfigData),
+    staff_aoe_radius = Config.Number("staff_aoe_radius", GetModConfigData),
+    daylight_sanity_regen = Config.Number("daylight_sanity_regen", GetModConfigData),
+    daylight_health_regen = Config.Number("daylight_health_regen", GetModConfigData),
+    darkform_sanity_percent = .05,
+    darkform_toggle_interval = .35,
+    heatvision_damage = Config.Number("heatvision_damage", GetModConfigData),
     heatvision_ignite = GetModConfigData("heatvision_ignite") ~= false,
     heatvision_range = 20,
     heatvision_width = 0.8,
@@ -26,7 +29,7 @@ G.TUNING.KRYPTON_SURVIVOR = {
     frostbreath_half_angle = 28,
     frostbreath_duration = 1,
     frostbreath_interval = 1.2,
-    frostbreath_coldness = 2,
+    frostbreath_coldness = Config.Number("frostbreath_coldness", GetModConfigData),
     frostbreath_freezetime = 4,
     flight_enabled = GetModConfigData("flight_enabled") ~= false,
     flight_toggle_interval = 0.35,
@@ -132,11 +135,14 @@ local HeatVision = require("krypton_heatvision")
 local FrostBreath = require("krypton_frostbreath")
 local Flight = require("krypton_flight")
 local MapTeleport = require("krypton_map_teleport")
+local DarkForm = require("krypton_darkform")
 -- A stable namespace works for both local and Workshop folder names.
 local rpc_namespace = "KryptonSurvivor"
 AddModRPCHandler(rpc_namespace, "HeatVision", HeatVision.Cast)
 AddModRPCHandler(rpc_namespace, "FrostBreath", FrostBreath.Cast)
 local ability_messages = zh and {
+    dark_on = "黑暗超人形态已开启，保持低理智。",
+    dark_off = "已恢复正常超人形态。",
     flight_on = "飞行已开启。",
     flight_off = "已经着陆。",
     cannot_land = "这里无法着陆，先飞回陆地或船上。",
@@ -145,12 +151,14 @@ local ability_messages = zh and {
     teleported = "瞬移成功，已抵达目标位置。",
     blocked = "落点被挡住了，换个位置。",
     restricted = "无法穿过这里的特殊屏障。",
-    paused = "游戏仍在暂停，请恢复游戏后再瞬移。",
-    busy = "请先结束当前动作，再使用瞬移。",
-    controls_disabled = "人物暂时无法操作，请恢复控制后再瞬移。",
+    paused = "游戏仍在暂停，请恢复游戏后再使用这项能力。",
+    busy = "请先结束当前动作，再使用这项能力。",
+    controls_disabled = "人物暂时无法操作，请恢复控制后再使用这项能力。",
     unavailable = "当前人物状态无法使用这项能力。",
     disabled = "服务器已关闭这项能力。",
 } or {
+    dark_on = "Dark Superman enabled. Sanity stays low.",
+    dark_off = "Normal Superman restored.",
     flight_on = "Flight enabled.",
     flight_off = "Landed.",
     cannot_land = "Fly back to land or a boat before landing.",
@@ -159,9 +167,9 @@ local ability_messages = zh and {
     teleported = "Teleported to the selected location.",
     blocked = "That spot is blocked. Try another location.",
     restricted = "This special barrier blocks teleportation.",
-    paused = "The game is paused. Resume before teleporting.",
-    busy = "Finish your current action before teleporting.",
-    controls_disabled = "Regain character control before teleporting.",
+    paused = "The game is paused. Resume before using this ability.",
+    busy = "Finish your current action before using this ability.",
+    controls_disabled = "Regain character control before using this ability.",
     unavailable = "This ability is unavailable in your current state.",
     disabled = "The server has disabled this ability.",
 }
@@ -172,6 +180,10 @@ local function SayAbilityResult(player, reason)
         player.components.talker:Say(ability_messages[reason])
     end
 end
+AddModRPCHandler(rpc_namespace, "ToggleDarkForm", function(player)
+    local success, reason = DarkForm.Toggle(player)
+    SayAbilityResult(player, reason)
+end)
 AddModRPCHandler(rpc_namespace, "ToggleFlight", function(player)
     local success, reason = Flight.Toggle(player)
     SayAbilityResult(player, success and (Flight.IsFlying(player) and "flight_on" or "flight_off") or reason)
@@ -204,6 +216,12 @@ local flight_key = flight_key_name ~= "disabled" and (flight_keys[flight_key_nam
 require("krypton_flight_input")(G, flight_key, function()
     SendModRPCToServer(GetModRPC(rpc_namespace, "ToggleFlight"))
 end)
+local dark_key_name = GetModConfigData("darkform_key", true) or "KEY_H"
+local dark_keys = { KEY_H = G.KEY_H, KEY_J = G.KEY_J, KEY_K = G.KEY_K }
+local dark_key = dark_key_name ~= "disabled" and (dark_keys[dark_key_name] or G.KEY_H) or nil
+require("krypton_darkform_input")(G, dark_key, function()
+    SendModRPCToServer(GetModRPC(rpc_namespace, "ToggleDarkForm"))
+end)
 local map_mode = GetModConfigData("map_teleport_input", true) or "ctrl_right"
 AddClassPostConstruct("screens/mapscreen", require("krypton_map_teleport_input")(G, map_mode, function(x, z)
     SendModRPCToServer(GetModRPC(rpc_namespace, "MapTeleport"), x, z)
@@ -217,6 +235,8 @@ require("krypton_ability_hud").Install(G, {
         or (heatvision_keys[key_name] ~= nil and key_name or "KEY_R"),
     frostbreath_key = frost_key_name == "disabled" and "disabled"
         or (frost_keys[frost_key_name] ~= nil and frost_key_name or "KEY_X"),
+    darkform_key = dark_key_name == "disabled" and "disabled"
+        or (dark_keys[dark_key_name] ~= nil and dark_key_name or "KEY_H"),
     add_class_post_construct = AddClassPostConstruct,
 })
-print("[Krypton Survivor] Registered krypton_survivor; version 0.9.0")
+print("[Krypton Survivor] Registered krypton_survivor; version 0.11.0")

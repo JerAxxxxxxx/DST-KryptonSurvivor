@@ -2,9 +2,9 @@
 
 [简体中文](README.md) · **English**
 
-Bring DC's Superman to **Don't Starve Together** on Steam. Enjoy powerful stats, full night vision, heat vision, frost breath, flight, map teleportation, the exclusive axe **Rao's Edge** and the **Starcore Amulet**. Built for relaxed exploration and overpowered combat with friends.
+Bring DC's Superman to **Don't Starve Together** on Steam. Enjoy powerful stats, full night vision, heat vision, frost breath, flight, map teleportation, Dark Superman form, the exclusive axe **Rao's Edge** and the **Starcore Amulet**. Built for relaxed exploration and overpowered combat with friends.
 
-**Current code version: 0.9.0.** Skill feedback has passed in-game testing; multiplayer protection scenarios remain to be tested. **Steam Workshop remains at 0.8.2, with no update planned yet.** Supports Chinese and English; the features below describe the repository code. See the [changelog](docs/changelog.md) for Workshop version differences.
+**Current version: 0.11.0, available on Steam Workshop.** Supports Chinese and English. See the [changelog](docs/changelog.md) for the full update history.
 
 [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3811663817) · [Changelog](docs/changelog.md) · [Development guide](docs/build.md) · [Report an issue](https://github.com/JerAxxxxxxx/DST-KryptonSurvivor/issues)
 
@@ -25,6 +25,7 @@ For a local installation, copy the complete `mod/` directory to your game's `mod
 | Heat vision | Aim with the mouse and press **R**. No equipment required. |
 | Frost breath | Aim with the mouse and press **X** to breathe cold air. |
 | Toggle flight | Press **V**. Flight starts enabled. |
+| Dark form | Press **H** to switch between normal and Dark Superman. No equipment required. |
 | Map teleport | Open the map with **Tab**, hold **Ctrl**, then **right-click** the destination. |
 | Harvest with Rao's Edge | Use **Space** or **left-click** to pick berries, grass and twigs. |
 | Dig with Rao's Edge | **Right-click** to uproot plants. Tree stumps can also be dug with **Space**. |
@@ -34,11 +35,21 @@ Heat vision, frost breath and flight keys can be changed in the mod settings. Th
 ## Character abilities
 
 - Maximum health, hunger and sanity are **10,000 each**.
-- No natural hunger loss or ongoing sanity drain. Instant effects, such as food penalties, can still change sanity.
+- No natural hunger loss or ongoing sanity drain. In normal form, instant effects such as food penalties can still change sanity.
 - Full night vision at night and in caves, without the Moggles color filter.
-- Regenerates **100 health and 100 sanity per second** during daytime on the surface, up to the current maximum. Regeneration stops at dusk, at night, in caves, and while dead or a ghost.
+- Surface daytime recovery defaults to **100 health and 100 sanity per second** in normal form. Set each independently to **0, 10, 50, 100 or 500 per second**; 0 disables that recovery. Dark form always keeps sanity low. Daytime recovery stops at dusk, at night, in caves, and while dead or a ghost.
 - Movement speed can be set to **1.5×, 2× or 3×** a normal character's speed; the default is **1.5×**.
 - Eating uses open-mouth, chewing and satisfied expressions alongside the game's body, food and sound animations. The normal expression returns when eating ends or is interrupted.
+
+## Dark Superman
+
+Press **H** to switch forms. The local shortcut can be changed to J, K or disabled; there is no material cost or equipment requirement.
+
+- Dark form maintains real sanity at about **5%** (500 with the default maximum of 10,000) and skips daytime sanity regeneration. Food, shadow kills and other changes are corrected on the next simulation tick.
+- Returning to normal restores the sanity percentage held before entering dark form, respecting current native sanity penalties. Daytime sanity recovery resumes; health, healing, night vision and other powers are unchanged.
+- The form persists through saving, cave migration and revival. Sanity is not forced while dead or a ghost.
+- Low sanity meets ordinary insanity thresholds, while shadow creatures follow native spawn and interaction rules. This does not instantly summon them. Lunar areas retain their native enlightenment rules, so low sanity does not guarantee ordinary shadows there; other forced sanity effects are also preserved.
+- Chat, interfaces, pause, busy actions and death block switching. Safe riding and flight are supported. H follows the same input policy as R: Ctrl, Alt or Shift alone does not disable the ability. The panel shows the form and actual key; switches have text feedback. This first version keeps the existing artwork.
 
 ## Heat vision
 
@@ -59,7 +70,7 @@ The shortcut is inactive while chatting, interacting with interfaces or placing 
 Aim with the mouse and press **X** to release blue-white cold mist and ice crystals from the mouth. This innate ability needs no equipment and consumes no hunger, sanity, materials or durability.
 
 - A forward cone with a **range of 8** and a **28° half-angle**. Each cast lasts about **1 second**; the minimum cast interval is **1.2 seconds**.
-- Applies the game's native freezing mechanics to enemies, adding **2 coldness once per target per cast**. It causes no direct health damage.
+- Applies the game's native freezing mechanics to enemies, adding **1, 2, 4 or 8 coldness once per target per cast**, default **2**. It causes no direct health damage.
 - Whether a target freezes, and for how long, follows native resistance, freeze immunity and boss diminishing returns. It does not force every target to freeze or promise a fixed duration.
 - Freezing skips players, followers, companions, domesticated creatures, walls and structures. The breath can still extinguish burning or smoldering friends, structures and trees.
 - Campfires, cooking facilities and fueled devices are preserved so intentional fire sources keep working.
@@ -72,7 +83,7 @@ Casting temporarily uses the supplied open-mouth front or profile head, with mis
 Superman's exclusive axe is provided and automatically equipped on spawn. Other characters cannot use it and will drop it if they pick it up.
 
 - Configurable damage: **2,000, 10,000 or 50,000**, default **2,000**.
-- Extended melee reach and area damage around the target. Area damage shares heat vision and freezing's protection rules, skipping players, followers, companions, domesticated and player-aligned creatures, walls and structures. Deliberate primary melee attacks keep native behavior.
+- Melee range is **3, 6, 10 or 16**, default **6**. Splash radius is **0, 3, 5, 8 or 12**, default **5**; 0 disables splash while retaining primary hits. Area damage shares heat vision and freezing's protection rules, skipping players, followers, companions, domesticated and player-aligned creatures, walls and structures. Deliberate primary melee attacks keep native behavior.
 - Works as an axe, pickaxe, hammer and shovel, at **10×** normal tool efficiency.
 - **Space and left-click prioritize harvesting** berries, grass and twigs. Continuing to hold Space after picking will not uproot those plants; use right-click when you want to transplant them. Tree stumps can still be dug with Space.
 - Unlimited durability. Attacks, tool work and lighting consume no fuel or resources.
@@ -124,6 +135,8 @@ Each row has its own cape, star shield or revival-arrow icon, dimmed when inacti
 
 Two additional text rows show **heat vision and frost breath**, including each player's actual configured key and readiness, cooldown, casting or unavailability. Short cooldowns dim the rows without rapidly changing decimal timers. Disabled keys and server-disabled frost breath are also explained. Skill state comes from the server and cooldown completion follows simulation time, stopping when paused. The panel remains read-only, with hover help.
 
+A final **Form** row shows Normal or Dark, with purple text for Dark. It reads the server-replicated form and does not predict switches while paused.
+
 ## Configuration
 
 | Setting | Options | Default |
@@ -131,6 +144,11 @@ Two additional text rows show **heat vision and frost breath**, including each p
 | Language | Automatic, Chinese, English | Automatic |
 | Movement speed | 1.5×, 2×, 3× | 1.5× |
 | Axe damage | 2,000, 10,000, 50,000 | 2,000 |
+| Axe attack range (server) | 3, 6, 10, 16 | 6 |
+| Axe splash radius (server) | 0 off, 3, 5, 8, 12 | 5 |
+| Frost breath coldness (server) | 1, 2, 4, 8 | 2 |
+| Daytime health / second (server) | 0 off, 10, 50, 100, 500 | 100 |
+| Daytime sanity / second (server) | 0 off, 10, 50, 100, 500 | 100 |
 | Heat vision damage | 2,000, 10,000, 50,000 | 2,000 |
 | Heat vision ignition (server) | Enabled, Disabled | Enabled |
 | Heat vision key | R, G, Z, Disabled | R |
@@ -138,13 +156,14 @@ Two additional text rows show **heat vision and frost breath**, including each p
 | Frost breath key | X, C, N, Disable key | X |
 | Flight ability (server) | Enabled, Disabled | Enabled |
 | Flight toggle key | V, B, Disable key | V |
+| Dark form key | H, J, K, Disable key | H |
 | Map teleport ability (server) | Enabled, Disabled | Enabled |
 | Map teleport input | Ctrl + right-click, Disabled | Ctrl + right-click |
 | Ability status HUD | Show, Hide | Show |
 | Ability HUD size | 80%, 100%, 120% | 100% |
 | Ability HUD position | Default, Shift left, Shift down | Default |
 
-There are **15 settings**. Each player configures their own heat vision, frost breath and flight keys, map teleport input, and HUD visibility, size and position. The Starcore Amulet revival cooldown is fixed at one game day.
+There are **21 settings**. Hosts set the new values under **Create/Edit World → Server Mods → Configure**, then restart the world. All players use the same server values; old worlds without the new fields keep the defaults. Each player configures their own heat vision, frost breath, flight and dark form keys, map teleport input, and HUD visibility, size and position. The Starcore Amulet revival cooldown is fixed at one game day.
 
 ## Development
 

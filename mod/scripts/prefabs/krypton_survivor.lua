@@ -4,6 +4,7 @@ local EatingVisual = require("krypton_eating_visual")
 local ToolActions = require("krypton_tool_actions")
 local StarcoreStarter = require("krypton_starcore_starter")
 local AbilityStatus = require("krypton_ability_status")
+local DarkForm = require("krypton_darkform")
 local assets = {
     Asset("ANIM", "anim/krypton_survivor.zip"),
     Asset("ANIM", "anim/krypton_flight.zip"),
@@ -19,6 +20,7 @@ local function common_postinit(inst)
     inst.AnimState:SetBuild("krypton_survivor")
     Flight.CommonInit(inst)
     AbilityStatus.CommonInit(inst)
+    DarkForm.CommonInit(inst)
     EatingVisual.CommonInit(inst)
     ToolActions.CommonInit(inst)
     local function EnableNightVision(player)
@@ -73,15 +75,24 @@ local function master_postinit(inst)
     inst.components.hunger:SetRate(0)
     inst.components.sanity:SetMax(tuning.sanity)
     inst.components.sanity.rate_modifier = 0
-    inst:DoPeriodicTask(1, function(player)
-        if TheWorld.state.isday and not TheWorld:HasTag("cave") and not player:HasTag("playerghost")
-            and not player.components.health:IsDead() then
-            player.components.sanity:DoDelta(tuning.daylight_sanity_regen)
-            if player.components.health:IsHurt() then
-                player.components.health:DoDelta(tuning.daylight_health_regen, true, "krypton_sunlight")
+    inst:AddComponent("krypton_darkform")
+    if tuning.daylight_sanity_regen > 0 or tuning.daylight_health_regen > 0 then
+        inst:DoPeriodicTask(1, function(player)
+            if TheWorld.state.isday and not TheWorld:HasTag("cave") and not player:HasTag("playerghost")
+                and not player:HasTag("corpse") and not player.components.health:IsDead() then
+                local sanity = player.components.sanity
+                -- DoDelta at the effective maximum still emits sanitydelta.
+                -- Keep forced/induced display percentages out of this decision.
+                if tuning.daylight_sanity_regen > 0 and not DarkForm.IsDark(player)
+                    and sanity:GetRealPercent() < 1 - sanity:GetPenaltyPercent() then
+                    sanity:DoDelta(tuning.daylight_sanity_regen)
+                end
+                if tuning.daylight_health_regen > 0 and player.components.health:IsHurt() then
+                    player.components.health:DoDelta(tuning.daylight_health_regen, true, "krypton_sunlight")
+                end
             end
-        end
-    end)
+        end)
+    end
 
     -- The shared hook also configures remote-client movement prediction.
     inst.ExtraConfigurePlayerLocomotor(inst)

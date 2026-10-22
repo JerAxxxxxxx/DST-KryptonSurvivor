@@ -55,7 +55,11 @@ local function caster()
 end
 SpawnPrefab = function() return { IsValid = function() return true end, Remove = noop, SetCaster = noop } end
 local query_targets = {}
-TheSim = { FindEntities = function() return query_targets end }
+local query_count, query_radius = 0
+TheSim = { FindEntities = function(_, _, _, _, radius)
+    query_count, query_radius = query_count + 1, radius
+    return query_targets
+end }
 
 -- Each attack receives deliberately unfiltered broad-phase results so that
 -- the server's final protection check, not only the query tags, is exercised.
@@ -144,4 +148,19 @@ for _, attack in ipairs({ "heat", "frost", "splash" }) do
         end
     end
 end
+local protected, ordinary = matrix()
+local actor = caster()
+TUNING.KRYPTON_SURVIVOR.staff_aoe_radius = 12
+weapon.components.weapon.onattack(weapon, actor, primary)
+equal(query_radius, 12, "configured splash radius reaches the broad-phase query")
+for _, target in ipairs(ordinary) do equal(target.components.combat.hits, 1, "larger splash keeps normal damage") end
+for _, target in ipairs(protected) do equal(target.components.combat.hits, nil, "larger splash retains friendly protection") end
+local before = query_count
+TUNING.KRYPTON_SURVIVOR.staff_aoe_radius = 0
+weapon.components.weapon.onattack(weapon, actor, primary)
+equal(query_count, before, "zero splash performs no broad-phase query")
+for _, target in ipairs(ordinary) do equal(target.components.combat.hits, 1, "zero splash deals no new collateral damage") end
+equal(weapon.components.weapon.damage, 2000, "zero splash preserves the original primary weapon damage")
+equal(primary.components.combat.hits, nil, "the native primary hit remains outside the splash callback")
+TUNING.KRYPTON_SURVIVOR.staff_aoe_radius = 5
 print("Combat protection: shared friendly-target matrix, native targeting, unchanged damage and independent friendly extinguishing passed.")

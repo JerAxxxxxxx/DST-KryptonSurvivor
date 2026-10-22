@@ -9,15 +9,16 @@ local AbilityStatus = Class(Widget, function(self, owner, options)
     self.owner = owner
     self.language = options.language
     self.skill_keys = { heatvision_key = options.heatvision_key, frostbreath_key = options.frostbreath_key }
+    self.darkform_key = options.darkform_key
     self.get_skill_context = options.get_skill_context
 
     -- Only the neutral panel square comes from the installed game. Each row
     -- uses its own generated raster icon, packaged in this mod's UI atlas.
     self.background = self:AddChild(Image("images/global.xml", "square.tex"))
     -- Expand downwards: the existing top edge, title and three icon rows stay
-    -- where players placed them, while two text-only skill rows fit below.
-    self.background:SetSize(250, 190)
-    self.background:SetPosition(0, -29)
+    -- where players placed them, while skills and the form row fit below.
+    self.background:SetSize(250, 217)
+    self.background:SetPosition(0, -42.5)
     self.background:SetTint(.055, .065, .08, .75)
     self.background:SetClickable(false)
 
@@ -51,15 +52,21 @@ local AbilityStatus = Class(Widget, function(self, owner, options)
         row:SetPosition(0, -77 - (i - 1) * 27)
         self.skill_rows[i] = row
     end
+    self.form_row = self:AddChild(Text(UIFONT, 18, ""))
+    self.form_row:SetRegionSize(230, 26)
+    self.form_row:SetHAlign(ANCHOR_LEFT)
+    self.form_row:SetPosition(0, -131)
     self._on_status_dirty = function() self:Refresh() end
     self.inst:ListenForEvent(Status.DIRTY_EVENT, self._on_status_dirty, owner)
+    self.inst:ListenForEvent(Status.FORM_DIRTY_EVENT, self._on_status_dirty, owner)
     self:Refresh()
     self:StartUpdating()
 end)
 
 function AbilityStatus:RefreshSkills(snapshot)
+    snapshot = snapshot or Status.GetSnapshot(self.owner)
     local context = self.get_skill_context ~= nil and self.get_skill_context() or nil
-    local rows = Status.GetSkillRows(snapshot or Status.GetSnapshot(self.owner), self.language, self.skill_keys, context)
+    local rows = Status.GetSkillRows(snapshot, self.language, self.skill_keys, context)
     for i, model in ipairs(rows) do
         local previous = self._skill_models[i]
         if previous == nil or previous.text ~= model.text or previous.state ~= model.state
@@ -69,6 +76,15 @@ function AbilityStatus:RefreshSkills(snapshot)
             self.skill_rows[i]:SetTooltip(model.tooltip)
             self._skill_models[i] = model
         end
+    end
+    local form = Status.GetFormRow(snapshot, self.language, self.darkform_key, context)
+    local previous = self._form_model
+    if previous == nil or previous.text ~= form.text or previous.state ~= form.state
+        or previous.tooltip ~= form.tooltip or previous.available ~= form.available then
+        self.form_row:SetString(form.text)
+        self.form_row:SetColour(form.colour)
+        self.form_row:SetTooltip(form.tooltip)
+        self._form_model = form
     end
 end
 

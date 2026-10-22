@@ -67,10 +67,10 @@ local function Update(inst)
     end
     local angle = inst._angle:value() * DEGREES
     local dx, dz = math.cos(angle), -math.sin(angle)
-    if caster.Transform.GetRotation ~= nil then
-        local facing = caster.Transform:GetRotation() * DEGREES
-        if math.cos(facing) * dx - math.sin(facing) * dz < 0.7 then Clear(inst, true); return end
-    end
+    -- The cast angle is authoritative. Client prediction and replicated body
+    -- rotation can disagree for a frame, particularly when aiming diagonally;
+    -- treating that as an interruption permanently stopped the mouth and mist.
+    -- The server's Pulse ends real turn-away casts and removes this proxy.
     local x, y, z = GetMouth(inst, caster)
     if x == nil then Clear(inst); return end
     if inst._mist == nil then
