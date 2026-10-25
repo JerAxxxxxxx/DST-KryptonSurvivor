@@ -5,9 +5,12 @@ local ToolActions = require("krypton_tool_actions")
 local StarcoreStarter = require("krypton_starcore_starter")
 local AbilityStatus = require("krypton_ability_status")
 local DarkForm = require("krypton_darkform")
+local DarkFormVisual = require("krypton_darkform_visual")
 local assets = {
     Asset("ANIM", "anim/krypton_survivor.zip"),
     Asset("ANIM", "anim/krypton_flight.zip"),
+    Asset("ANIM", "anim/krypton_dark_suit.zip"),
+    Asset("ANIM", "anim/krypton_dark_flight.zip"),
     Asset("ANIM", "anim/krypton_eating.zip"),
     Asset("ANIM", "anim/krypton_frostbreath_head.zip"),
     Asset("ANIM", "anim/ghost_wilson_build.zip"),
@@ -21,6 +24,7 @@ local function common_postinit(inst)
     Flight.CommonInit(inst)
     AbilityStatus.CommonInit(inst)
     DarkForm.CommonInit(inst)
+    DarkFormVisual.CommonInit(inst, DarkForm.IsDark)
     EatingVisual.CommonInit(inst)
     ToolActions.CommonInit(inst)
     local function EnableNightVision(player)
@@ -66,7 +70,9 @@ local function master_postinit(inst)
         self.skin_data = self.skin_data or {}
         self.skin_data.normal_skin = "krypton_survivor"
         self.skin_data.ghost_skin = "ghost_wilson_build"
-        return set_skin_mode(self, skin_type, default_build)
+        local result = set_skin_mode(self, skin_type, default_build)
+        DarkFormVisual.OnSkinModeChanged(inst)
+        return result
     end
     skinner:SetSkinMode("normal_skin")
 

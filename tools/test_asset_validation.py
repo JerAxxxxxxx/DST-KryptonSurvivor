@@ -6,6 +6,7 @@ tree, never the source artwork or compiled mod in the working directory.
 from pathlib import Path
 import importlib.util
 import os
+import re
 import shutil
 import struct
 import subprocess
@@ -121,6 +122,28 @@ class AssetValidationTests(unittest.TestCase):
         (self.release / "mod/images/inventoryimages/krypton_staff.xml").unlink()
         self.rejected("Missing declared local asset")
 
+    def test_missing_mod_icon_metadata(self):
+        path = self.release / "mod/modinfo.lua"
+        path.write_text(re.sub(r'(?m)^icon(?:_atlas)?\s*=.*$', '',
+                               path.read_text(encoding="utf8")), encoding="utf8")
+        self.rejected("Missing or duplicate frontend mod icon field")
+
+    def test_missing_mod_icon_atlas(self):
+        (self.release / "mod/modicon.xml").unlink()
+        self.rejected("Missing declared local asset")
+
+    def test_mod_icon_path_casing_matches_linux(self):
+        path = self.release / "mod/modinfo.lua"
+        path.write_text(path.read_text(encoding="utf8").replace(
+            'icon_atlas = "modicon.xml"', 'icon_atlas = "Modicon.xml"'), encoding="utf8")
+        self.rejected("Missing declared local asset")
+
+    def test_mod_icon_element_matches_metadata(self):
+        path = self.release / "mod/modicon.xml"
+        path.write_text(path.read_text(encoding="utf8").replace(
+            '<Element name="modicon.tex"', '<Element name="unrelated.tex"'), encoding="utf8")
+        self.rejected("Missing frontend mod icon atlas element")
+
     def test_missing_owned_animation_reference(self):
         (self.release / "mod/scripts/missing_asset_fixture.lua").write_text(
             'local assets = { Asset("ANIM", "anim/krypton_missing_for_test.zip") }\n',
@@ -184,6 +207,70 @@ class AssetValidationTests(unittest.TestCase):
         path.write_text(path.read_text(encoding="utf8").replace(
             'filename="krypton_staff.tex"', 'filename="missing_texture.tex"'), encoding="utf8")
         self.rejected("Missing atlas texture")
+
+    def test_dark_suit_cannot_override_heads_or_hands(self):
+        normal = self.release / "mod/anim/krypton_survivor.zip"
+        target = self.release / "mod/anim/krypton_dark_suit.zip"
+        with zipfile.ZipFile(normal) as archive:
+            build = archive.read("build.bin")
+            texture = archive.read("atlas-0.tex")
+        old_size = struct.unpack_from("<I", build, 16)[0]
+        name = b"krypton_dark_suit"
+        build = build[:16] + struct.pack("<I", len(name)) + name + build[20 + old_size:]
+        with zipfile.ZipFile(target, "w") as archive:
+            archive.writestr("build.bin", build)
+            archive.writestr("atlas-0.tex", texture)
+        self.rejected("Dark suit must contain clothing symbols only")
+
+    def test_dark_suit_geometry_matches_normal(self):
+        def move_joint(name, data):
+            if name != "build.bin":
+                return data
+            modified = bytearray(data)
+            start, _ = symbol_record_offsets(data)[0]
+            offset = start + 16  # First frame's x center.
+            value = struct.unpack_from("<f", data, offset)[0]
+            struct.pack_into("<f", modified, offset, value + 1)
+            return bytes(modified)
+
+        rewrite_archive(self.release / "mod/anim/krypton_dark_suit.zip", move_joint)
+        self.rejected("Dark suit symbol geometry must match normal")
+
+    def test_matching_normal_dark_waists_cannot_revert_to_wide_shorts(self):
+        def widen_waist(name, data):
+            if name != "build.bin":
+                return data
+            modified = bytearray(data)
+            for start, _ in symbol_record_offsets(data):
+                # SDBM hash of torso_pelvis; mutate both builds together so their
+                # mutual geometry check alone cannot catch the old wide waist.
+                if struct.unpack_from("<I", data, start)[0] == 3281870581:
+                    struct.pack_into("<f", modified, start + 8 + 16, 76)
+            return bytes(modified)
+
+        for relative in ("krypton_survivor.zip", "krypton_dark_suit.zip"):
+            rewrite_archive(self.release / "mod/anim" / relative, widen_waist)
+        self.rejected("Waist width must match supplied suit placement")
+
+    def test_dark_flight_needs_all_six_poses(self):
+        def drop_last_pose(name, data):
+            if name != "build.bin":
+                return data
+            modified = bytearray(data)
+            start, _ = symbol_record_offsets(data)[0]
+            offset = start + 8 + 5 * struct.calcsize("<II4fII")
+            struct.pack_into("<I", modified, offset, 6)
+            return bytes(modified)
+
+        rewrite_archive(self.release / "mod/anim/krypton_dark_flight.zip", drop_last_pose)
+        self.rejected("Dark flight must cover six poses")
+
+    def test_dark_suit_does_not_bundle_animation(self):
+        with zipfile.ZipFile(self.release / "mod/anim/krypton_flight.zip") as archive:
+            owned_animation = archive.read("anim.bin")
+        with zipfile.ZipFile(self.release / "mod/anim/krypton_dark_suit.zip", "a") as archive:
+            archive.writestr("anim.bin", owned_animation)
+        self.rejected("Dark suit packs must be build-only")
 
 
 if __name__ == "__main__":

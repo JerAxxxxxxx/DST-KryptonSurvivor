@@ -2,7 +2,21 @@
 
 仓库中的 `mod/` 已包含编译资源，可直接安装。修改 Lua 只需 Node.js；重新处理图片和生成预览还需要 Python 与本机安装的《饥荒联机版》。
 
-当前代码与 Steam 创意工坊版本均为 **0.11.0**。本次工坊更新累计覆盖0.8.2之后的黑暗形态、技能反馈、友方保护、吐息修复与服务器数值配置，详见[更新记录](changelog.md)。
+当前代码版本为 **0.12.3**，包含黑暗战衣、整套服装切换修正、飞行显示与腰部切片修正，以及模组列表图标。整体游戏试玩已通过；Steam创意工坊上次确认版本仍为 **0.11.0**，0.12.3发布资料已准备，待上传确认。完整改动见[更新记录](changelog.md)。
+
+## 黑暗战衣资源
+
+`python tools/build_dark_suit_assets.py` 使用 `assets/slices.json` 的 `dark_suit` 源图、选区和位置，生成 `krypton_dark_suit.zip` 的55帧衣物覆盖，以及 `krypton_dark_flight.zip` 的6个飞行姿态。两个包只含自有BILD/KTEX；衣物符号与正常模型的帧号和几何一致，飞行沿用已存在的自定义ANIM。原图、正常人物和武器资源保持不变。
+
+`python tools/preview_dark_suit.py` 从编译包解码，读取本机动作并在内存中合成三方向站立／跑步／攻击与六种飞行循环。输出位于 `build/previews/dark-*`，全部选区与来源记录见 `build/dark-suit-extraction-manifest.json`；预览不替代实际联机和游戏GPU显示测试。
+
+地面服装按已有服务器形态位切换。0.12.3起，由主机／服务器（含专用服务器）调用游戏自身 `SetSkinsOnAnim(..., "NO_BASE")` 完整处理服装；该模式不替换角色基础皮肤，却会处理全套服装符号、显隐和绘制交换。进入黑暗时使用空服装表清理Steam大衣等外观，再绑定黑衣六个身体部位；退出时直接使用当前 `skinner.clothing`、皮肤数据和诅咒状态，完整恢复原衣物。服装选择和存档衣物字段不修改，不再保存六个局部符号作为恢复依据。
+
+客户端接收原生模型同步，不自行反复改服装。原生 `SetSkinMode` 完成后检查已保存形态，处理衣柜、加载和复活；普通稳定状态没有服装轮询重置。幽灵不套正常衣物，头部表情、基础皮肤、帽子和持物保留，飞行独立素材路径不变。实际切换时记录一条无玩家身份的服装来源日志，便于核对真实运行结果；真实联网及GPU显示仍需实测。
+
+0.12.1起，飞行还显式绑定私有 `krypton_flight_body` 符号，按 `GetSymbolOverride` 返回的原生build／symbol哈希确认实际绑定，缺失或晚到旧形态时恢复。绑定未就绪先保留可见普通动作，避免只凭Lua缓存切入空白循环；健康绑定不重复写。
+
+正常腰部选区及宽度／横向锚点在 `slices.json` 的 `selections` 和 `placement.pelvis`；黑暗对应选区在 `dark_suit`。前／背宽39、侧宽25，不再将供图腰部横向拉满原版68–76宽的关节框；保留每帧原生纵向重叠使跑动与攻击中的腿根衔接。资源检查独立核对供图摆放，防止两套资源同时回退宽腰却互相匹配。
 
 ## 环境
 
@@ -186,6 +200,14 @@ python tools/preview_frostbreath.py --game-dir "你的饥荒联机版安装目�
 
 ### Lua与游戏行为
 
+可选的本机原生服装检查直接在内存中加载已安装游戏的服装表和 `SetSkinsOnAnim`，核对Trench Coat整套搭配的下摆、袖口、显隐及交换恢复，不把原版源码写入仓库或发布包：
+
+```powershell
+node tools/check_native_clothing.cjs --game-zip "D:\SteamLibrary\steamapps\common\Don't Starve Together\data\databundles\scripts.zip"
+```
+
+结果位于忽略的 `build/native-clothing-audit/report.json`。这项检查使用真实原版Lua与记录模型指令的AnimState，验证服装调用状态；它不模拟C++／GPU、Steam所有权或网络传输。普通CI不依赖本机游戏，仍运行 `npm run check` 与 `npm run check:assets`。
+
 修改 Lua 后运行 `npm run check`。检查覆盖 Lua 5.1 语法、资源引用、语言、选人模型、角色属性、装备、联机分支、采集、所有权、范围伤害、夜视与热视线，以及飞行碰撞、存档、预测、视觉和地图瞬移的落点、权限、暂停恢复与输入焦点。工具操作回归覆盖原生工作优先于采集的情形、连续空格采集、已采完植物保护、服务器指定目标验证、右键挖掘及原有工具动作。GitHub Actions 在推送和拉取请求时执行同一套检查，无需安装游戏。
 
 0.9.0新增三种范围效果的共用目标保护交叉回归，验证点燃关闭仍造成原伤害、友方保护不妨碍灭火、技能事件时序与短冷却恢复。公共规则位于 `mod/scripts/krypton_combat_targets.lua`；主目标普攻与原生CanTarget校验保持各自职责。
@@ -227,3 +249,9 @@ python tools/prepare_workshop_preview.py
 ```
 
 命令从持斧正面原图裁切、缩放生成 `build/workshop/preview.jpg` 和 `preview.png`（512×512）。裁切位置记录在 `assets/slices.json`，原图保持不变。上传 Mod 内容时选择 `mod/`；封面可使用生成的标准 RGB、非渐进 JPG。
+
+### 游戏内模组列表图标
+
+运行 `python tools/build_mod_icon.py`，按 `assets/slices.json` 的 `mod_icon` 从同一张正式源图裁切、缩放成128×128图标，输出根目录 `mod/modicon.xml` 和 `mod/modicon.tex`。编译KTEX含完整RGBA mip链；解码预览为 `build/previews/mod-icon-compiled.png`，来源哈希和裁切记录为 `build/mod-icon-extraction-manifest.json`。不修改原图或人物动画。
+
+`modinfo.lua` 的 `icon_atlas`／`icon`供前端在modmain加载前使用，必须与图集、纹理及Element名称一致；这份图标独立于工坊封面。游戏内模组列表及右侧详情会显示它，原版配置弹窗没有独立图片区。同版本metadata可能使用旧缓存，因此本次补丁提升为0.11.1。资源检查现已覆盖前端字段、大小写、文件和Element引用，四种缺失／错误回归纳入原有资源检查。

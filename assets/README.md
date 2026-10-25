@@ -10,6 +10,8 @@
 | 悬浮待机、飞行移动的三方向完整姿态 | [source/superman-flight.jpg](source/superman-flight.jpg) | Gemini_Generated_Image_u7i1k8u7i1k8u7i1.jpg |
 | 吃东西时的张嘴、咀嚼及满足表情 | [source/superman-eat.jpg](source/superman-eat.jpg) | eat.jpg |
 | 吐息时的正面与侧面张嘴头部 | [source/superman-frostbreath-head.jpg](source/superman-frostbreath-head.jpg) | head.jpg |
+| 黑暗战衣的躯干、披风与四肢 | [source/superman-dark-suit.jpg](source/superman-dark-suit.jpg) | 3.jpg |
+| 黑衣悬停与飞行的六个完整姿态 | [source/superman-dark-flight.jpg](source/superman-dark-flight.jpg) | fly.jpg |
 
 正式源文件仅调整文件名和存放目录，字节内容与收到的原图完全相同。角色身份为 DC 超人；部分图片由 Gemini 生成，原始文件名不用于推断生成模型的具体版本。
 
@@ -36,3 +38,5 @@ ui/ 中的名称 PNG 是早期已有的 SUPERMAN 文字素材，只用于名称�
 热视线的眼部定位记录在 `slices.json` 的 `heatvision` 段，由构建工具转换为头部局部像素坐标。光束与眼部亮光运行时加载已安装游戏的 `wagdrone_laserwire_fx` 和 `bishop_attack`；角色的声音、幽灵与通用动作也使用游戏运行时资源。Mod 只提供自有的编译贴图、特效实体与玩法逻辑，不复制游戏原版动画、贴图或参考 Mod 美术。
 
 `tools/preview_heatvision.py` 在内存中读取本机游戏资源，与编译人物像素合成定位预览。切片、动作预览和几何检查输出保存在忽略的 `build/`，不进入发布包。构建命令见 [构建说明](../docs/build.md)。
+
+黑暗战衣的两份源图是用户原文件的逐字节副本，来源及SHA-256见 [dark-suit-provenance.json](source/dark-suit-provenance.json)。只从三合一图左／中部分提取衣物，飞行单独使用fly.jpg；不使用三合一图中缺姿势的飞行部分。所有选区和关节位置在 `slices.json` 的 `dark_suit` 中，alpha选区移除披风背后纸底，原图像素仅作提取、镜像、旋转及缩放。新包只含55帧衣物和6帧飞行BILD/KTEX；普通头部、手、武器及原动作复用，未重画人物、脸或衣服，也未分发原版动画。

@@ -49,3 +49,10 @@ generation tool in this conversation. Original transparent PNGs, full prompts
 and source hashes are stored under assets/source/ui/. No exact generation model
 version is inferred. The mod's 128-pixel icon atlases use only alpha-bound crops,
 uniform scaling and placement; the code license does not relicense these images.
+
+Dark clothing and six matching flight poses use the owner's supplied 3.jpg and
+fly.jpg, stored byte-for-byte as superman-dark-suit.jpg and superman-dark-flight.jpg.
+Only alpha selections, pixel extraction, mirroring, rotation and scaling are used.
+krypton_dark_suit.zip and krypton_dark_flight.zip contain owned BILD/KTEX data only;
+normal heads, hands, equipment and installed animation remain separate. Source
+hashes and attribution are recorded in assets/source/dark-suit-provenance.json.

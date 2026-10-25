@@ -42,7 +42,7 @@ def selection(name):
     mask = Image.new('L',source.size)
     ImageDraw.Draw(mask).polygon(points,fill=255)  # alpha selection, never RGB art
     alpha = np.minimum(np.asarray(source.getchannel('A')),np.asarray(mask))
-    if name in ['upper-arm','forearm','leg','bent-leg','pelvis','empty-hand']:
+    if name in ['upper-arm','forearm','leg','bent-leg','pelvis','pelvis-side','empty-hand']:
         # Cloth behind a limb does not belong to that moving limb. Boots are
         # supplied by the separate foot symbol, not duplicated in the shin.
         rgb=np.asarray(source).astype(float)
@@ -131,7 +131,11 @@ for frame in range(8):
     im=fitted('foot',(35,28),flip=frame in [1,2,5,7])
     if frame==4:im=im.rotate(-45,expand=True,resample=Image.Resampling.BICUBIC)
     save('foot',frame,im)
-for frame in range(11):save('torso_pelvis',frame,fitted('pelvis',(55,32)))
+# Extract the front/side waist separately. Its width is supplied by the suit,
+# while the compiler keeps the native vertical overlap that connects moving legs.
+for placement in SPEC['placement']['pelvis'].values():
+    im=selection(placement['selection'])[0]
+    for frame in placement['frames']:save('torso_pelvis',frame,im)
 
 portrait=selection('portrait')[0]
 portrait.save(OUT/'portrait.png');save('SWAP_ICON',0,portrait)

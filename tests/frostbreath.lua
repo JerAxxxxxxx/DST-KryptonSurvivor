@@ -438,6 +438,11 @@ end
 package.preload["krypton_eating_visual_data"] = function()
     return load_source("mod/scripts/krypton_eating_visual_data.lua")
 end
+package.preload["krypton_darkform"] = function()
+    return load_source("mod/scripts/krypton_darkform.lua")
+end
+local DarkForm = require("krypton_darkform")
+local DarkSuit = load_source("mod/scripts/krypton_darkform_visual.lua")
 local Mouth = require("krypton_frostbreath_visual_data")
 local HeadData = require("krypton_frostbreath_head_data")
 local HeadVisual = require("krypton_frostbreath_head_visual")
@@ -474,7 +479,9 @@ local function visual_actor()
     end,
     IsSkinBuild = function(self, build) return hash(build) == hash("genuine_skin") end,
     OverrideSymbol = function(self, target, build, symbol)
-        assert(target == "headbase" or target == "headbase_hat", "only the head is overridden")
+        local clothes = { torso = true, torso_pelvis = true, arm_upper = true, arm_lower = true, leg = true, foot = true }
+        assert(target == "headbase" or target == "headbase_hat" or clothes[target],
+            "Only head expressions and the dark suit's six clothing joints may change")
         actor.overrides[target] = { hash_names[build] or build, hash_names[symbol] or symbol }
         actor.writes = actor.writes + 1
     end,
@@ -809,12 +816,41 @@ head_pose(concurrent, nil)
 equal(delayed_fx._mist, nil, "late-arriving older cast cannot resurrect old expression")
 delayed_fx:Remove()
 
--- Exercise both real module orderings instead of duplicating eating's logic.
+-- Exercise both real head-module orderings. A remote client's wardrobe is
+-- authored by the server; these explicit snapshots stand in for delivered
+-- AnimState packets and do not claim to simulate actual networking.
 for _, eating_first in ipairs({ true, false }) do
     local p = visual_actor()
+    local suit_builds = {}
+    p.AnimState.AddOverrideBuild = function(self, build)
+        error("Dark clothes must select the actual six symbols, not an ambiguous build overlay")
+    end
+    p.AnimState.ClearOverrideBuild = function(self, build)
+        equal(build, "krypton_dark_suit", "Form cleanup only releases its own clothes")
+        suit_builds[build] = nil
+    end
+    p._krypton_dark_form = { stored = false, value = function(self) return self.stored end }
+    DarkSuit.CommonInit(p, DarkForm.IsDark)
     p.overrides.headbase = { "genuine_skin", "pre_breath_head" }
     EatingVisual.CommonInit(p)
     local fx = observer_cast(p)
+    local mouth_fx = fx._mist
+    for _, value in ipairs({ true, false, true }) do
+        for _, symbol in ipairs({ "torso", "torso_pelvis", "arm_upper", "arm_lower", "leg", "foot" }) do
+            p.overrides[symbol] = value and { "krypton_dark_suit", symbol } or nil
+        end
+        p._krypton_dark_form.stored = value
+        emit(p, DarkForm.DIRTY_EVENT)
+        updater(fx)
+        head_pose(p, "front")
+        equal(fx._mist, mouth_fx, "Changing clothes cannot erase the active mouth mist")
+        for _, symbol in ipairs({ "torso", "torso_pelvis", "arm_upper", "arm_lower", "leg", "foot" }) do
+            local source = p.AnimState:GetSymbolOverride(symbol)
+            equal(source == hash("krypton_dark_suit"), value,
+                "Delivered clothes remain untouched by the client's active head expression")
+        end
+        equal(fx._krypton_breath_stopped, nil, "A body overlay is not a base/skin change")
+    end
     p.animation = "eat_pre"
     if eating_first then
         -- Native newstate listeners register eating before this cast.
@@ -824,6 +860,10 @@ for _, eating_first in ipairs({ true, false }) do
         EatingVisual.Apply(p)
     end
     equal(p.overrides.headbase[1], "krypton_eating_build", "meal owns active expression after interruption")
+    p._krypton_dark_form.stored = false
+    emit(p, DarkForm.DIRTY_EVENT)
+    EatingVisual.Apply(p)
+    equal(p.overrides.headbase[1], "krypton_eating_build", "Returning to normal clothes preserves meal handoff")
     updater(fx)
     equal(p.overrides.headbase[1], "krypton_eating_build", "old FX cannot overwrite eating")
     p.animation = "idle_loop"; EatingVisual.Apply(p)

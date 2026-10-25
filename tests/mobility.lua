@@ -11,6 +11,7 @@ local function close(actual, expected, message)
 end
 
 FRAMES = 1 / 30
+hash = function(value) return value end
 TILE_SCALE = 10
 COLLISION = { GROUND = 1, LAND_OCEAN_LIMITS = 2, BOAT_LIMITS = 4, OBSTACLES = 8, CHARACTERS = 16 }
 MAX_PHYSICS_RADIUS = 3
@@ -47,6 +48,7 @@ CreateEntity = function()
 end
 IsTeleportingPermittedFromPointToPoint = function(sx, sy, sz, x, y, z) return teleport_permitted end
 package.preload["componentutil"] = function() return {} end
+package.preload["krypton_darkform"] = function() return load_source("mod/scripts/krypton_darkform.lua") end
 package.preload["krypton_flight_visual"] = function() return load_source("mod/scripts/krypton_flight_visual.lua") end
 package.preload["krypton_flight"] = function() return load_source("mod/scripts/krypton_flight.lua") end
 local Flight = require("krypton_flight")
@@ -119,8 +121,17 @@ local function player()
     inst.PushEvent = function(self, event) self.pushed_event = event; record("event") end
     inst.SnapCamera = function(self) self.camera_snapped = true; record("camera") end
     inst.Transform = { GetWorldPosition = function() return inst.x, inst.y, inst.z end }
-    inst.AnimState = { animation = "attack", plays = 0, length = 1,
+    inst.AnimState = { animation = "attack", plays = 0, length = 1, symbols = {},
         AddOverrideBuild = function(self, build) self.override_build = build end,
+        ClearOverrideBuild = function(self, build)
+            if self.override_build == build then self.override_build = nil end
+        end,
+        GetSymbolOverride = function(self, target)
+            local value = self.symbols[target]
+            if value ~= nil then return value[1], value[2] end
+        end,
+        OverrideSymbol = function(self, target, build, symbol) self.symbols[target] = { build, symbol } end,
+        ClearOverrideSymbol = function(self, target) self.symbols[target] = nil end,
         IsCurrentAnimation = function(self, animation) return self.animation == animation end,
         PlayAnimation = function(self, animation, loop) self.animation, self.loop = animation, loop; self.plays = self.plays + 1 end,
         GetCurrentAnimationLength = function(self) return self.length end,

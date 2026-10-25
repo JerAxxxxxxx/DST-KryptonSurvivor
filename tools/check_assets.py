@@ -17,6 +17,7 @@ OWNED_ANIMATION_ARCHIVES={
     'anim/krypton_survivor.zip', 'anim/krypton_staff_build.zip',
     'anim/krypton_flight.zip', 'anim/krypton_eating.zip',
     'anim/krypton_frostbreath_head.zip', 'anim/krypton_starcore_build.zip',
+    'anim/krypton_dark_suit.zip', 'anim/krypton_dark_flight.zip',
 }
 
 
@@ -63,7 +64,41 @@ def check_texture(data):
     assert rows[-1][:2]==(1,1),'Missing mip levels'
     return read_tex(data)
 
-declarations=check_asset_references()
+def check_mod_icon(spec):
+    # Mod-list assets load in the frontend, before modmain's Asset declarations.
+    # Validate the metadata contract too, rather than merely checking orphan XML.
+    metadata=(MOD/'modinfo.lua').read_text(encoding='utf8')
+    values={}
+    for field in ('icon_atlas','icon'):
+        matches=re.findall(r'''(?m)^[ \t]*%s[ \t]*=[ \t]*["']([^"']+)["']''' % field,metadata)
+        assert len(matches)==1,'Missing or duplicate frontend mod icon field: '+field
+        values[field]=matches[0]
+    distributed={p.relative_to(MOD).as_posix() for p in MOD.rglob('*') if p.is_file()}
+    atlas=PurePosixPath(values['icon_atlas'])
+    element=values['icon']
+    assert not atlas.is_absolute() and '..' not in atlas.parts and atlas.suffix=='.xml', \
+        'Invalid frontend mod icon atlas path'
+    assert PurePosixPath(element).name==element and element.endswith('.tex'), \
+        'Frontend mod icon must use a texture filename'
+    texture=atlas.parent/element
+    for path in (atlas,texture):
+        assert path.as_posix() in distributed, \
+            'Missing declared local asset (case-sensitive): '+path.as_posix()
+    assert values['icon_atlas']==spec['atlas'] and element==spec['element'], \
+        'Frontend mod icon metadata disagrees with slices'
+    xml=ET.fromstring((MOD/atlas).read_text(encoding='utf8'))
+    assert xml.find('Texture').attrib['filename']==spec['texture']==element, \
+        'Frontend mod icon texture disagrees with metadata'
+    assert element in [node.attrib['name'] for node in xml.findall('./Elements/Element')], \
+        'Missing frontend mod icon atlas element: '+element
+    image=check_texture((MOD/texture).read_bytes())
+    assert image.size==tuple(spec['output_size']), 'Wrong frontend mod icon size'
+    assert image.getbbox(), 'Empty frontend mod icon'
+    return 2
+
+
+spec=json.loads((ROOT/'assets/slices.json').read_text(encoding='utf8'))
+declarations=check_asset_references()+check_mod_icon(spec['mod_icon'])
 total=0
 for archive,name,count in [('krypton_survivor.zip','krypton_survivor',132),
                             ('krypton_staff_build.zip','krypton_staff_build',3)]:
@@ -79,7 +114,6 @@ for archive,name,count in [('krypton_survivor.zip','krypton_survivor',132),
                 assert all(0<=v[3]<=1 and 0<=v[4]<=1 and v[5]==0 for v in verts)
                 crop_symbol(build,texture,symbol,row[0])
                 total+=1
-spec=json.loads((ROOT/'assets/slices.json').read_text(encoding='utf8'))
 # Generated mouth data must follow the authored source pixels, including mirrors.
 frost_data=(MOD/'scripts/krypton_frostbreath_visual_data.lua').read_text(encoding='utf8')
 for direction,layout in spec['frostbreath']['mouth_points'].items():
@@ -210,6 +244,61 @@ with zipfile.ZipFile(MOD/'anim/krypton_starcore_build.zip') as z:
     assert all(0<=v[3]<=1 and 0<=v[4]<=1 and v[5]==0 for v in verts)
     assert crop_symbol(build,texture,symbol,starcore['frame']).getbbox(),'Missing supplied starcore'
     total+=1
+dark=spec['dark_suit']
+clothing={'torso','arm_upper','arm_lower','leg','foot','torso_pelvis'}
+assert set(dark['body_symbols'])==clothing, 'Dark suit must contain clothing symbols only'
+with zipfile.ZipFile(MOD/dark['geometry_template']) as archive:
+    normal_body=read_build(archive.read('build.bin'))
+normal_symbols={symbol['name']:symbol for symbol in normal_body['symbols']}
+# Matching normal/dark builds can share the same wrong wide waist. Check both
+# against the reviewed source placement, independently of their mutual match.
+waist_frames={}
+for direction,layout in spec['placement']['pelvis'].items():
+    assert layout['frames']==dark['torso_frames'][direction], 'Waist facing must match body facing'
+    assert layout['selection'] in spec['selections']
+    for frame in layout['frames']:
+        assert frame not in waist_frames, 'Duplicate waist frame placement'
+        waist_frames[frame]=layout
+assert set(waist_frames)==set(range(11)), 'Missing waist frame placement'
+for row in normal_symbols['torso_pelvis']['frames']:
+    layout=waist_frames[row[0]]
+    assert abs(row[2]-layout['center_x'])<1e-5 and abs(row[4]-layout['width'])<1e-5, \
+        'Waist width must match supplied suit placement'
+with zipfile.ZipFile(MOD/dark['flight_template']) as archive:
+    normal_flight=read_build(archive.read('build.bin'))
+for relative,name,is_flight in [(dark['archive'],dark['build'],False),
+                                (dark['flight_archive'],dark['flight_build'],True)]:
+    with zipfile.ZipFile(MOD/relative) as archive:
+        assert set(archive.namelist())=={'build.bin','atlas-0.tex'}, 'Dark suit packs must be build-only'
+        build=read_build(archive.read('build.bin'));texture=check_texture(archive.read('atlas-0.tex'))
+        validate_build_symbols(build)
+        assert build['name']==name, 'Wrong dark suit build name'
+        if is_flight:
+            assert len(build['symbols'])==1 and build['symbols'][0]['name']==dark['flight_symbol']
+            assert [row[0] for row in build['symbols'][0]['frames']]==list(range(6)), \
+                'Dark flight must cover six poses'
+            templates={symbol['name']:symbol for symbol in normal_flight['symbols']}
+        else:
+            assert {symbol['name'] for symbol in build['symbols']}==clothing, \
+                'Dark suit must contain clothing symbols only'
+            templates=normal_symbols
+        assert sum(len(symbol['frames']) for symbol in build['symbols'])==(6 if is_flight else 55)
+        for symbol in build['symbols']:
+            original=templates[symbol['name']]
+            assert [row[:6] for row in symbol['frames']]==[row[:6] for row in original['frames']], \
+                'Dark suit symbol geometry must match normal'
+            for row in symbol['frames']:
+                verts=build['verts'][row[6]:row[6]+row[7]]
+                assert len(verts)==6 and all(0<=v[3]<=1 and 0<=v[4]<=1 and v[5]==0 for v in verts)
+                assert crop_symbol(build,texture,symbol,row[0]).getbbox(), 'Empty dark suit symbol'
+                total+=1
+provenance=json.loads((ROOT/'assets/source/dark-suit-provenance.json').read_text(encoding='utf8'))
+for source,item in dark['sources'].items():
+    path=ROOT/item['path']
+    assert hashlib.sha256(path.read_bytes()).hexdigest()==provenance['sources'][source]['sha256'], \
+        'Dark suit source hash mismatch'
+    with Image.open(path) as image:
+        assert image.size==tuple(item['reference_size']), 'Dark suit source dimensions changed'
 for p in MOD.rglob('*.tex'):check_texture(p.read_bytes())
 for p in MOD.rglob('*.xml'):
     atlas=ET.fromstring(p.read_text(encoding='utf8'))
@@ -241,4 +330,4 @@ ui_manifest=ROOT/'build/ability-ui-extraction-manifest.json'
 if ui_manifest.exists():
     for item in json.loads(ui_manifest.read_text(encoding='utf8'))['icons'].values():
         assert hashlib.sha256((ROOT/item['source']).read_bytes()).hexdigest()==item['sha256']
-print(f'Validated {total} symbol frames, {declarations} asset declarations, full texture mip chains, UI atlases and available source hashes.')
+print(f'Validated {total} symbol frames, {declarations} asset declarations, frontend mod icon, full texture mip chains, UI atlases and available source hashes.')

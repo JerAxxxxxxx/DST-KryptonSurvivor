@@ -1,6 +1,11 @@
 local Visual = {}
+local DarkForm = require("krypton_darkform")
 
 local BUILD = "krypton_flight_build"
+local DARK_BUILD = "krypton_dark_flight"
+local SYMBOL = "krypton_flight_body"
+local SYMBOL_HASH = hash(SYMBOL)
+local BUILD_HASHES = { [BUILD] = hash(BUILD), [DARK_BUILD] = hash(DARK_BUILD) }
 local IDLE = "krypton_flight_idle"
 local MOVE = "krypton_flight_move"
 local LOOPS = { "idle_loop", "run_loop", "walk_loop" }
@@ -10,6 +15,49 @@ local LOOPS = { "idle_loop", "run_loop", "walk_loop" }
 local FLIGHT_SOUND = "meta5/woby/sprint_wind_lp"
 local FLIGHT_SOUND_VOLUME = .15
 
+local function IsFlightSymbolBound(inst)
+    local desired = inst._krypton_flight_visual_build
+    if desired == nil then return false end
+    local build, symbol = inst.AnimState:GetSymbolOverride(SYMBOL)
+    return build == BUILD_HASHES[desired] and symbol == SYMBOL_HASH
+end
+
+local function ClearFlightBuild(inst)
+    local previous = inst._krypton_flight_visual_build
+    if previous ~= nil then
+        if IsFlightSymbolBound(inst) then inst.AnimState:ClearOverrideSymbol(SYMBOL) end
+        inst.AnimState:ClearOverrideBuild(previous)
+        inst._krypton_flight_visual_build = nil
+    end
+end
+
+local function ApplyFlightBuild(inst)
+    local health = inst.components.health or (inst.replica ~= nil and inst.replica.health)
+    if inst:IsAsleep() or inst:HasTag("playerghost") or inst:HasTag("corpse")
+        or (health ~= nil and health:IsDead()) then
+        ClearFlightBuild(inst)
+        return false
+    end
+    local desired = DarkForm.IsDark(inst) and DARK_BUILD or BUILD
+    if inst._krypton_flight_visual_build ~= desired then
+        -- Both builds supply the same unique flight symbol. Keep exactly one
+        -- active so returning to normal cannot leave a later dark override in
+        -- front. Switching pixels must not restart the current flight cycle.
+        ClearFlightBuild(inst)
+        inst.AnimState:AddOverrideBuild(desired)
+        inst._krypton_flight_visual_build = desired
+    end
+    if not IsFlightSymbolBound(inst) then
+        -- CommonInit runs before native skin/save initialization finishes, and
+        -- a later replicated AnimState can replace an earlier local binding.
+        -- A Lua build cache is not proof that our sole flight symbol exists.
+        -- Bind it explicitly and compare the native returned hashes on every
+        -- refresh; leave clothing, heads and equipment symbols untouched.
+        inst.AnimState:OverrideSymbol(SYMBOL, desired, SYMBOL)
+    end
+    return IsFlightSymbolBound(inst)
+end
+
 local function StopFlightSound(inst)
     local sound = inst._krypton_flight_sound
     inst._krypton_flight_sound = nil
@@ -17,6 +65,11 @@ local function StopFlightSound(inst)
         sound.SoundEmitter:KillSound("krypton_flight")
         sound:Remove()
     end
+end
+
+local function ClearVisual(inst)
+    StopFlightSound(inst)
+    ClearFlightBuild(inst)
 end
 
 local function UpdateFlightSound(inst, moving)
@@ -86,9 +139,15 @@ local function IsSuspended(inst)
 end
 
 function Visual.Apply(inst)
-    if inst._krypton_flight_visual_isflying == nil then return end
+    if TheNet:IsDedicated() or inst._krypton_flight_visual_isflying == nil then return end
+    local build_ready = ApplyFlightBuild(inst)
+    if inst:IsAsleep() then
+        StopFlightSound(inst)
+        return
+    end
     local current = CurrentFlightAnimation(inst)
-    if not inst._krypton_flight_visual_isflying(inst) or IsSuspended(inst) or not IsNormalState(inst) then
+    if not build_ready or not inst._krypton_flight_visual_isflying(inst) or inst:HasTag("corpse")
+        or IsSuspended(inst) or not IsNormalState(inst) then
         StopFlightSound(inst)
         if current ~= nil then
             -- Only replace our own animation. A stategraph attack, gathering
@@ -145,11 +204,15 @@ function Visual.CommonInit(inst, is_flying)
         "krypton_survivor.flight_visual_suspended", "krypton_flight_visualdirty")
     -- Adds only this original artwork's unique body symbol. The wilson bank
     -- and the existing character build remain available for native actions.
-    inst.AnimState:AddOverrideBuild(BUILD)
+    if not TheNet:IsDedicated() then ApplyFlightBuild(inst) end
     inst:ListenForEvent("krypton_flight_visualdirty", Visual.Apply)
-    inst:ListenForEvent("entitysleep", StopFlightSound)
+    inst:ListenForEvent("krypton_darkformdirty", Visual.Apply)
+    inst:ListenForEvent("entitysleep", ClearVisual)
     inst:ListenForEvent("entitywake", Visual.Apply)
-    inst:ListenForEvent("onremove", StopFlightSound)
+    inst:ListenForEvent("death", ClearVisual)
+    inst:ListenForEvent("ms_becameghost", ClearVisual)
+    inst:ListenForEvent("respawnfromcorpse", Visual.Apply)
+    inst:ListenForEvent("onremove", ClearVisual)
     -- Native PlayFootstep supports this per-player hook in both Wilson SGs.
     -- Preserve skin/mod overrides whenever landing, mounted or doing an action;
     -- don't mute the SoundEmitter, which also plays combat and eating sounds.

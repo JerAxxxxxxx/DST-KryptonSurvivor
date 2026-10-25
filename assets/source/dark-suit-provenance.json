@@ -1,0 +1,17 @@
+{
+  "origin": "User-supplied black-suit variants; original user-pic files remain unchanged.",
+  "generation_model": "Not independently specified; no model version inferred.",
+  "operations": "Pixel extraction, alpha masks, mirroring, rotation, scaling and BILD/KTEX packaging only.",
+  "sources": {
+    "suit": {
+      "path": "assets/source/superman-dark-suit.jpg",
+      "original_filename": "3.jpg",
+      "sha256": "7689d826ddd76d2e39291ceffc2dff20b5a120edd9de587d9e11985ca1264107"
+    },
+    "flight": {
+      "path": "assets/source/superman-dark-flight.jpg",
+      "original_filename": "fly.jpg",
+      "sha256": "0885fe85659394133c4a615db4257f4a799fec745bd4e15b89a532a166631bce"
+    }
+  }
+}

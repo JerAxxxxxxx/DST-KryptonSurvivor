@@ -1,3 +1,4 @@
+hash = function(value) return value end
 local function load_source(path)
     local chunk, err = load(read_project_file(path), "@" .. path)
     assert(chunk, err)
@@ -37,6 +38,7 @@ package.preload["krypton_starcore_starter"] = function() return load_source("mod
 package.preload["krypton_eating_visual_data"] = function() return load_source("mod/scripts/krypton_eating_visual_data.lua") end
 package.preload["krypton_flight"] = function() return load_source("mod/scripts/krypton_flight.lua") end
 package.preload["krypton_darkform"] = function() return load_source("mod/scripts/krypton_darkform.lua") end
+package.preload["krypton_darkform_visual"] = function() return load_source("mod/scripts/krypton_darkform_visual.lua") end
 package.preload["krypton_darkform_input"] = function() return load_source("mod/scripts/krypton_darkform_input.lua") end
 package.preload["krypton_flight_input"] = function() return load_source("mod/scripts/krypton_flight_input.lua") end
 package.preload["krypton_map_teleport"] = function() return load_source("mod/scripts/krypton_map_teleport.lua") end
@@ -172,6 +174,10 @@ local player = {
     MiniMapEntity = { SetIcon = function(self, value) self.icon = value end },
     AnimState = { SetBuild = function(self, value) self.build = value end,
         AddOverrideBuild = function(self, value) self.override_build = value end,
+        ClearOverrideBuild = function(self, value) if self.override_build == value then self.override_build = nil end end,
+        GetSymbolOverride = function(self) return self.flight_build, self.flight_symbol end,
+        OverrideSymbol = function(self, target, build, symbol) self.flight_build, self.flight_symbol = build, symbol end,
+        ClearOverrideSymbol = function(self) self.flight_build, self.flight_symbol = nil, nil end,
         IsCurrentAnimation = function() return false end },
     AddTag = function(self, tag) self.tags[tag] = true end,
     AddComponent = function(self, name)
@@ -197,6 +203,7 @@ local player = {
     ListenForEvent = function(self, event, fn) self.activation = fn end,
     HasTag = function(self, tag) return self.tags[tag] == true end,
     IsValid = function() return true end,
+    IsAsleep = function() return false end,
     Transform = { GetWorldPosition = function() return 0, 0, 0 end },
     GetCurrentPlatform = function() return nil end,
     Physics = { mask = 31,
@@ -236,7 +243,10 @@ player.components.sanity.DoDelta = function(self, delta)
     self.calls = (self.calls or 0) + 1
     self.percent = math.max(0, math.min(1 - self.penalty, self.percent + delta / self.max))
 end
-player.components.skinner = { SetSkinMode = function(self, mode) self.mode = mode end }
+player.components.skinner = { clothing = {},
+    SetSkinMode = function(self, mode) self.mode = mode end,
+    GetSkinMode = function(self) return self.mode or "normal_skin" end,
+    GetMonkeyCurse = function() return nil end }
 player.components.locomotor = {
     pathcaps = { allowocean = false }, directdrive = false,
     enablegroundspeedmultiplier = true, triggerscreep = true, allow_platform_hopping = true,

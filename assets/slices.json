@@ -23,6 +23,14 @@
     "crop_pixels": [104, 0, 696, 592],
     "output_size": [512, 512]
   },
+  "mod_icon": {
+    "source": "standing",
+    "crop_pixels": [104, 0, 696, 592],
+    "output_size": [128, 128],
+    "atlas": "modicon.xml",
+    "texture": "modicon.tex",
+    "element": "modicon.tex"
+  },
   "placement": {
     "head": {
       "front":{"anchor":[180,226],"local_anchor":[0,18],"scale":1.12},
@@ -33,6 +41,11 @@
       "front":{"anchor":[175,225],"local_anchor":[0,-83],"scale":1.2},
       "side":{"anchor":[523,226],"local_anchor":[0,-85],"scale":1.2},
       "back":{"anchor":[854,217],"local_anchor":[0,-83],"scale":1.2}
+    },
+    "pelvis": {
+      "front":{"selection":"pelvis","frames":[0,1,2],"width":39,"center_x":-3.6},
+      "side":{"selection":"pelvis-side","frames":[3,4,5,9],"width":25,"center_x":-3.6},
+      "back":{"selection":"pelvis","frames":[6,7,8,10],"width":39,"center_x":-3.6}
     }
   },
   "heatvision": {
@@ -110,6 +123,7 @@
     "bent-leg":{"source":"motion","polygon":[[524,273],[542,279],[551,285],[541,289],[530,296],[521,294],[532,285],[520,283]],"largest_component":false},
     "foot":{"source":"standing","polygon":[[163,298],[172,299],[172,314],[154,319],[150,315],[159,307],[162,305]]},
     "pelvis":{"source":"standing","polygon":[[157,269],[186,269],[187,281],[177,288],[171,283],[160,291],[155,284]]},
+    "pelvis-side":{"source":"standing","polygon":[[516,270],[531,268],[529,281],[526,290],[514,290],[514,281]]},
     "portrait":{"source":"motion","polygon":[[85,35],[260,35],[260,335],[85,335]],"largest_component":false}
   },
   "frostbreath": {
@@ -207,5 +221,882 @@
         "element": "krypton_revival.tex"
       }
     }
+  },
+  "dark_suit": {
+    "build": "krypton_dark_suit",
+    "archive": "anim/krypton_dark_suit.zip",
+    "geometry_template": "anim/krypton_survivor.zip",
+    "flight_build": "krypton_dark_flight",
+    "flight_archive": "anim/krypton_dark_flight.zip",
+    "flight_template": "anim/krypton_flight.zip",
+    "flight_symbol": "krypton_flight_body",
+    "sources": {
+      "suit": {
+        "path": "assets/source/superman-dark-suit.jpg",
+        "reference_size": [
+          1778,
+          592
+        ],
+        "tolerance": 50
+      },
+      "flight": {
+        "path": "assets/source/superman-dark-flight.jpg",
+        "reference_size": [
+          1778,
+          592
+        ],
+        "tolerance": 30
+      }
+    },
+    "selections": {
+      "torso-front": {
+        "source": "suit",
+        "polygon": [
+          [
+            687,
+            349
+          ],
+          [
+            709,
+            352
+          ],
+          [
+            725,
+            343
+          ],
+          [
+            738,
+            347
+          ],
+          [
+            738,
+            361
+          ],
+          [
+            740,
+            388
+          ],
+          [
+            734,
+            414
+          ],
+          [
+            727,
+            430
+          ],
+          [
+            690,
+            430
+          ],
+          [
+            685,
+            416
+          ],
+          [
+            680,
+            397
+          ],
+          [
+            682,
+            374
+          ],
+          [
+            685,
+            360
+          ]
+        ]
+      },
+      "cape-front-right": {
+        "source": "suit",
+        "polygon": [
+          [
+            724,
+            339
+          ],
+          [
+            738,
+            347
+          ],
+          [
+            738,
+            361
+          ],
+          [
+            747,
+            394
+          ],
+          [
+            753,
+            422
+          ],
+          [
+            766,
+            445
+          ],
+          [
+            773,
+            461
+          ],
+          [
+            765,
+            469
+          ],
+          [
+            752,
+            465
+          ],
+          [
+            750,
+            439
+          ],
+          [
+            737,
+            437
+          ],
+          [
+            734,
+            447
+          ],
+          [
+            725,
+            434
+          ],
+          [
+            727,
+            402
+          ],
+          [
+            724,
+            374
+          ]
+        ]
+      },
+      "torso-side": {
+        "source": "suit",
+        "polygon": [
+          [
+            905,
+            354
+          ],
+          [
+            919,
+            352
+          ],
+          [
+            940,
+            363
+          ],
+          [
+            943,
+            381
+          ],
+          [
+            938,
+            404
+          ],
+          [
+            930,
+            426
+          ],
+          [
+            915,
+            428
+          ],
+          [
+            914,
+            414
+          ],
+          [
+            906,
+            412
+          ],
+          [
+            890,
+            413
+          ],
+          [
+            886,
+            400
+          ],
+          [
+            891,
+            375
+          ]
+        ]
+      },
+      "torso-back": {
+        "source": "suit",
+        "polygon": [
+          [
+            1084,
+            341
+          ],
+          [
+            1101,
+            347
+          ],
+          [
+            1122,
+            344
+          ],
+          [
+            1143,
+            346
+          ],
+          [
+            1150,
+            369
+          ],
+          [
+            1156,
+            391
+          ],
+          [
+            1174,
+            412
+          ],
+          [
+            1184,
+            430
+          ],
+          [
+            1197,
+            458
+          ],
+          [
+            1188,
+            467
+          ],
+          [
+            1180,
+            451
+          ],
+          [
+            1172,
+            457
+          ],
+          [
+            1163,
+            453
+          ],
+          [
+            1159,
+            474
+          ],
+          [
+            1148,
+            465
+          ],
+          [
+            1139,
+            473
+          ],
+          [
+            1128,
+            468
+          ],
+          [
+            1119,
+            470
+          ],
+          [
+            1110,
+            464
+          ],
+          [
+            1099,
+            464
+          ],
+          [
+            1089,
+            451
+          ],
+          [
+            1082,
+            454
+          ],
+          [
+            1074,
+            468
+          ],
+          [
+            1067,
+            460
+          ],
+          [
+            1059,
+            468
+          ],
+          [
+            1050,
+            458
+          ],
+          [
+            1040,
+            472
+          ],
+          [
+            1037,
+            457
+          ],
+          [
+            1048,
+            427
+          ],
+          [
+            1059,
+            405
+          ],
+          [
+            1070,
+            382
+          ],
+          [
+            1077,
+            360
+          ]
+        ]
+      },
+      "upper-arm": {
+        "source": "suit",
+        "polygon": [
+          [
+            672,
+            349
+          ],
+          [
+            682,
+            356
+          ],
+          [
+            678,
+            373
+          ],
+          [
+            670,
+            391
+          ],
+          [
+            658,
+            389
+          ],
+          [
+            663,
+            368
+          ]
+        ]
+      },
+      "forearm": {
+        "source": "suit",
+        "polygon": [
+          [
+            660,
+            389
+          ],
+          [
+            673,
+            393
+          ],
+          [
+            671,
+            411
+          ],
+          [
+            656,
+            410
+          ]
+        ]
+      },
+      "leg": {
+        "source": "suit",
+        "polygon": [
+          [
+            700,
+            434
+          ],
+          [
+            713,
+            434
+          ],
+          [
+            711,
+            468
+          ],
+          [
+            699,
+            471
+          ],
+          [
+            698,
+            462
+          ]
+        ]
+      },
+      "bent-leg": {
+        "source": "suit",
+        "polygon": [
+          [
+            320,
+            437
+          ],
+          [
+            342,
+            439
+          ],
+          [
+            371,
+            449
+          ],
+          [
+            371,
+            454
+          ],
+          [
+            351,
+            471
+          ],
+          [
+            341,
+            477
+          ],
+          [
+            333,
+            472
+          ],
+          [
+            350,
+            453
+          ],
+          [
+            324,
+            448
+          ]
+        ],
+        "largest_component": false
+      },
+      "foot": {
+        "source": "suit",
+        "polygon": [
+          [
+            700,
+            466
+          ],
+          [
+            712,
+            466
+          ],
+          [
+            710,
+            482
+          ],
+          [
+            686,
+            487
+          ],
+          [
+            684,
+            483
+          ],
+          [
+            699,
+            472
+          ]
+        ]
+      },
+      "pelvis": {
+        "source": "suit",
+        "polygon": [
+          [
+            694,
+            413
+          ],
+          [
+            735,
+            412
+          ],
+          [
+            737,
+            425
+          ],
+          [
+            730,
+            437
+          ],
+          [
+            718,
+            434
+          ],
+          [
+            712,
+            438
+          ],
+          [
+            698,
+            438
+          ],
+          [
+            692,
+            427
+          ]
+        ]
+      },
+      "pelvis-side": {
+        "source": "suit",
+        "polygon": [[920,410],[935,407],[932,422],[929,435],[916,435],[916,424]]
+      },
+      "flight-idle-front": {
+        "source": "flight",
+        "polygon": [
+          [
+            40,
+            10
+          ],
+          [
+            280,
+            10
+          ],
+          [
+            280,
+            421
+          ],
+          [
+            40,
+            421
+          ]
+        ]
+      },
+      "flight-idle-side": {
+        "source": "flight",
+        "polygon": [
+          [
+            350,
+            10
+          ],
+          [
+            581,
+            10
+          ],
+          [
+            581,
+            421
+          ],
+          [
+            350,
+            421
+          ]
+        ]
+      },
+      "flight-idle-back": {
+        "source": "flight",
+        "polygon": [
+          [
+            624,
+            10
+          ],
+          [
+            890,
+            10
+          ],
+          [
+            890,
+            449
+          ],
+          [
+            624,
+            449
+          ]
+        ]
+      },
+      "flight-move-front": {
+        "source": "flight",
+        "polygon": [
+          [
+            939,
+            10
+          ],
+          [
+            1252,
+            10
+          ],
+          [
+            1252,
+            449
+          ],
+          [
+            939,
+            449
+          ]
+        ]
+      },
+      "flight-move-side": {
+        "source": "flight",
+        "polygon": [
+          [
+            1292,
+            9
+          ],
+          [
+            1772,
+            9
+          ],
+          [
+            1772,
+            270
+          ],
+          [
+            1292,
+            270
+          ]
+        ]
+      },
+      "flight-move-back": {
+        "source": "flight",
+        "polygon": [
+          [
+            1594,
+            244
+          ],
+          [
+            1777,
+            244
+          ],
+          [
+            1777,
+            585
+          ],
+          [
+            1343,
+            585
+          ],
+          [
+            1343,
+            330
+          ],
+          [
+            1594,
+            330
+          ]
+        ]
+      },
+      "cape-side": {
+        "source": "suit",
+        "polygon": [
+          [
+            899,
+            344
+          ],
+          [
+            917,
+            352
+          ],
+          [
+            902,
+            366
+          ],
+          [
+            889,
+            388
+          ],
+          [
+            884,
+            401
+          ],
+          [
+            878,
+            414
+          ],
+          [
+            865,
+            431
+          ],
+          [
+            852,
+            431
+          ],
+          [
+            840,
+            442
+          ],
+          [
+            828,
+            450
+          ],
+          [
+            824,
+            434
+          ],
+          [
+            829,
+            412
+          ],
+          [
+            851,
+            398
+          ],
+          [
+            876,
+            376
+          ],
+          [
+            888,
+            358
+          ]
+        ]
+      }
+    },
+    "body_placements": {
+      "front": {
+        "anchor": [
+          711,
+          350
+        ],
+        "local_anchor": [
+          0,
+          -53
+        ],
+        "scale": 0.8,
+        "mirror_cape": "cape-front-right",
+        "cape_local_anchor": [
+          0,
+          -83
+        ],
+        "include_cape_original": true
+      },
+      "side": {
+        "anchor": [
+          941,
+          362
+        ],
+        "local_anchor": [
+          0,
+          -65
+        ],
+        "scale": 0.8,
+        "cape_local_anchor": [
+          0,
+          -85
+        ],
+        "separate_cape": "cape-side"
+      },
+      "back": {
+        "anchor": [
+          1112,
+          343
+        ],
+        "local_anchor": [
+          0,
+          -83
+        ],
+        "scale": 0.85
+      }
+    },
+    "body_symbols": [
+      "torso",
+      "arm_upper",
+      "arm_lower",
+      "leg",
+      "foot",
+      "torso_pelvis"
+    ],
+    "limb_placements": {
+      "arm_upper": {
+        "selection": "upper-arm",
+        "rotation": 10
+      },
+      "arm_lower": {
+        "selection": "forearm",
+        "rotation": 8,
+        "horizontal_frames": [
+          2,
+          6
+        ]
+      },
+      "leg": {
+        "selection": "leg",
+        "bent_selection": "bent-leg",
+        "bent_frames": [
+          4,
+          6,
+          7,
+          8
+        ],
+        "flip_vertical_frames": [
+          4
+        ]
+      },
+      "foot": {
+        "selection": "foot",
+        "flip_horizontal_frames": [
+          1,
+          2,
+          5,
+          7
+        ],
+        "rotation_frames": {
+          "4": -45
+        }
+      },
+      "torso_pelvis": {
+        "selection": "pelvis",
+        "selection_frames": {"3":"pelvis-side","4":"pelvis-side","5":"pelvis-side","9":"pelvis-side"}
+      }
+    },
+    "torso_frames": {
+      "front": [
+        0,
+        1,
+        2
+      ],
+      "side": [
+        3,
+        4,
+        5,
+        9
+      ],
+      "back": [
+        6,
+        7,
+        8,
+        10
+      ]
+    },
+    "flight_poses": [
+      {
+        "selection": "flight-idle-front",
+        "frame": 0,
+        "direction": "front",
+        "fit": "contain-bottom"
+      },
+      {
+        "selection": "flight-idle-side",
+        "frame": 1,
+        "direction": "side",
+        "fit": "contain-bottom"
+      },
+      {
+        "selection": "flight-idle-back",
+        "frame": 2,
+        "direction": "back",
+        "fit": "contain-bottom"
+      },
+      {
+        "selection": "flight-move-front",
+        "frame": 3,
+        "direction": "front",
+        "fit": "contain-bottom"
+      },
+      {
+        "selection": "flight-move-side",
+        "frame": 4,
+        "direction": "side",
+        "fit": "contain-bottom"
+      },
+      {
+        "selection": "flight-move-back",
+        "frame": 5,
+        "direction": "back",
+        "fit": "contain-bottom"
+      }
+    ]
   }
 }

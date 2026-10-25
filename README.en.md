@@ -4,7 +4,7 @@
 
 Bring DC's Superman to **Don't Starve Together** on Steam. Enjoy powerful stats, full night vision, heat vision, frost breath, flight, map teleportation, Dark Superman form, the exclusive axe **Rao's Edge** and the **Starcore Amulet**. Built for relaxed exploration and overpowered combat with friends.
 
-**Current version: 0.11.0, available on Steam Workshop.** Supports Chinese and English. See the [changelog](docs/changelog.md) for the full update history.
+**Current code version: 0.12.3**, with the overall in-game playtest complete. The last confirmed Steam Workshop version is **0.11.0**; the 0.12.3 upload materials are ready, awaiting upload confirmation. This version includes the black suit, complete outfit restoration, flight visibility and waist-sprite fixes, and the mod-list icon. Supports Chinese and English. See the [changelog](docs/changelog.md) for the full update history.
 
 [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3811663817) · [Changelog](docs/changelog.md) · [Development guide](docs/build.md) · [Report an issue](https://github.com/JerAxxxxxxx/DST-KryptonSurvivor/issues)
 
@@ -49,7 +49,8 @@ Press **H** to switch forms. The local shortcut can be changed to J, K or disabl
 - Returning to normal restores the sanity percentage held before entering dark form, respecting current native sanity penalties. Daytime sanity recovery resumes; health, healing, night vision and other powers are unchanged.
 - The form persists through saving, cave migration and revival. Sanity is not forced while dead or a ghost.
 - Low sanity meets ordinary insanity thresholds, while shadow creatures follow native spawn and interaction rules. This does not instantly summon them. Lunar areas retain their native enlightenment rules, so low sanity does not guarantee ordinary shadows there; other forced sanity effects are also preserved.
-- Chat, interfaces, pause, busy actions and death block switching. Safe riding and flight are supported. H follows the same input policy as R: Ctrl, Alt or Shift alone does not disable the ability. The panel shows the form and actual key; switches have text feedback. This first version keeps the existing artwork.
+- Dark form wears a charcoal suit, silver S emblem, black cape and black boots, with matching hover and flight poses. It temporarily hides selected Steam clothing; returning to normal restores the complete current outfit without changing clothing selections or item data. Faces and eating/breath heads keep the existing artwork.
+- Chat, interfaces, pause, busy actions and death block switching. Safe riding and flight are supported. H follows the same input policy as R: Ctrl, Alt or Shift alone does not disable the ability. The panel shows the form and actual key; switches have text feedback.
 
 ## Heat vision
 

@@ -1,7 +1,7 @@
 name = "Krypton Survivor · 氪星幸存者"
-description = "超人测试版 / Superman prototype\n黑暗形态切换（默认 H）、飞行（默认 V）、Ctrl＋地图右键瞬移、热视线（R）、冰冻吐息（X）、能力状态面板、拉奥之锋、星核护符、完整夜视和白天恢复。\nDark form toggle (H), flight (V), Ctrl + map right-click teleport, heat vision (R), frost breath (X), ability HUD, Rao's Edge, Starcore Amulet, night vision and daytime recovery."
+description = "超人角色 / Superman character\n黑暗形态与黑色战衣（默认 H）、飞行（默认 V）、Ctrl＋地图右键瞬移、热视线（R）、冰冻吐息（X）、能力状态面板、拉奥之锋、星核护符、完整夜视和白天恢复。\nDark form and black suit (H), flight (V), Ctrl + map right-click teleport, heat vision (R), frost breath (X), ability HUD, Rao's Edge, Starcore Amulet, night vision and daytime recovery."
 author = "Krypton Survivor Project"
-version = "0.11.0"
+version = "0.12.3"
 api_version = 10
 dst_compatible = true
 dont_starve_compatible = false
@@ -10,6 +10,8 @@ shipwrecked_compatible = false
 client_only_mod = false
 all_clients_require_mod = true
 server_filter_tags = { "character", "Krypton Survivor" }
+icon_atlas = "modicon.xml"
+icon = "modicon.tex"
 
 configuration_options = {
     {

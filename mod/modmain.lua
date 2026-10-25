@@ -239,4 +239,4 @@ require("krypton_ability_hud").Install(G, {
         or (dark_keys[dark_key_name] ~= nil and dark_key_name or "KEY_H"),
     add_class_post_construct = AddClassPostConstruct,
 })
-print("[Krypton Survivor] Registered krypton_survivor; version 0.11.0")
+print("[Krypton Survivor] Registered krypton_survivor; version 0.12.3")

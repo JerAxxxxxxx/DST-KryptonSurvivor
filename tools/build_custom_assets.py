@@ -77,6 +77,9 @@ for s in symbols:
             row[2:6]=[-1,20,28,54]
         if name=='hand':
             row[2:6]=[0,12,34,32] if frame in [1,4,12,14] else [0,12,28,30]
+        if name=='torso_pelvis':
+            waist=next(layout for layout in spec['placement']['pelvis'].values() if frame in layout['frames'])
+            row[2],row[4]=waist['center_x'],waist['width']
         source = image(f'{name}-{frame}')
         sprites[(name, frame)] = source.resize((max(1,round(row[4])),max(1,round(row[5]))),Image.Resampling.LANCZOS) if source.getbbox() else Image.new('RGBA',(2,2))
 preview = write_build('krypton_survivor', symbols, sprites, MOD/'anim/krypton_survivor.zip')
