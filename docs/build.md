@@ -230,7 +230,7 @@ python tools/audit_starcore_native.py --scripts-zip "D:\SteamLibrary\steamapps\c
 .\tools\package.ps1
 ```
 
-此命令只打包 `mod/`，版本号取自 `mod/modinfo.lua`，输出 `dist/KryptonSurvivor-版本号.zip`。
+此命令只打包 `mod/`，版本号取自 `mod/modinfo.lua`，输出 `dist/KryptonSurvivor-版本号.zip`。同名旧包会先复制到忽略的 `archive/packages/` 并校验，再替换为新包。
 
 手动安装时，退出游戏和服务器，将 `mod/` 内的文件复制到游戏的 `mods/KryptonSurvivor/`，再在世界设置中启用服务器 Mod。更新前备份原安装；联机玩家应使用相同版本。
 
@@ -240,7 +240,9 @@ python tools/audit_starcore_native.py --scripts-zip "D:\SteamLibrary\steamapps\c
 .\tools\install.ps1 -GameDir "你的饥荒联机版安装目录"
 ```
 
-安装脚本检查游戏进程、备份原安装并逐文件校验复制结果。角色与武器的 prefab 标识保持 `krypton_survivor`、`krypton_staff`，以兼容现有存档。
+安装脚本检查游戏进程与链接路径，先在临时目录逐文件校验新安装，再把整个旧目录移入忽略的 `archive/installed-before-时间戳/`，最后替换并核对文件清单与内容。旧目录中的额外本地文件也会保留在归档中，但不混入新安装；替换失败时尝试恢复旧目录。角色与武器的 prefab 标识保持 `krypton_survivor`、`krypton_staff`，以兼容现有存档。
+
+维护安装／打包工具后，可在 PowerShell 7 运行 `./tools/test_distribution.ps1`。它使用忽略的 `build/` 下的独立样例，覆盖旧文件隔离、额外文件归档、故障回滚、再次安装与同版本包保留，不修改实际游戏目录。
 
 ## 工坊封面
 

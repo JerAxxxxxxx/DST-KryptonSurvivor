@@ -3,6 +3,19 @@ const path = require('path');
 const parser = require('luaparse');
 const {lua, lauxlib, lualib, to_luastring, to_jsstring} = require('fengari');
 const root = path.resolve(__dirname, '..');
+const packageVersion = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).version;
+const modInfo = parser.parse(fs.readFileSync(path.join(root, 'mod/modinfo.lua'), 'utf8'), {luaVersion: '5.1'});
+const versionAssignments = modInfo.body.filter(statement => statement.type === 'AssignmentStatement'
+  && statement.variables.some(variable => variable.type === 'Identifier' && variable.name === 'version'));
+if (versionAssignments.length !== 1) throw new Error('modinfo.lua must declare exactly one top-level version.');
+const assignment = versionAssignments[0];
+const versionValue = assignment.init[assignment.variables.findIndex(variable => variable.name === 'version')];
+// luaparse leaves string values null with its default encoding mode; decode the literal explicitly.
+const declaredVersion = versionValue?.type === 'StringLiteral' ? versionValue.raw.slice(1, -1) : null;
+if (!/^\d+\.\d+\.\d+$/.test(packageVersion) || declaredVersion !== packageVersion) {
+  throw new Error(`Version mismatch: package.json=${packageVersion}, modinfo.lua=${declaredVersion}`);
+}
+console.log(`Release version: ${packageVersion} matches package.json and modinfo.lua.`);
 if (fs.readFileSync(path.join(root,'LICENSE'),'utf8') !== fs.readFileSync(path.join(root,'mod/LICENSE'),'utf8')) {
   throw new Error('The installable mod must include the current project code license.');
 }

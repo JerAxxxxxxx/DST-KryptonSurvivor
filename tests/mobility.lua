@@ -248,8 +248,11 @@ equal(Flight.Toggle(cave_flyer), true, "a real platform permits landing")
 -- Prevent leaking out through the map helper's inclusive upper edge.
 reset_world()
 local edge_flyer = flying_player()
+local last_position = edge_flyer._krypton_flight_lastposition
 edge_flyer.x, edge_flyer.z = 99.9, 4
 apply(edge_flyer)
+assert(edge_flyer._krypton_flight_lastposition == last_position,
+    "position tracking reuses its table without allocating every frame")
 edge_flyer.x = 100
 apply(edge_flyer)
 close(edge_flyer.x, 99.9, "tile edge rolls back to last valid position")

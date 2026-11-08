@@ -493,6 +493,43 @@ nested.components.temperature:OnUpdate(1)
 assert(later_calls == 1 and later_sets == 2 and nested.components.health.currenthealth < nested_before,
     "retained Starcore closures must allow native temperature and damage after removal")
 local removed_thermal, removed_thermal_core = player()
+-- Other mods can wrap on every equip. Our own protection must occur only
+-- once in that growing external chain, and stay inert while unequipped.
+local repeated, repeated_core = player()
+local protection_checks = 0
+local original_check = repeated_core.IsProtected
+repeated_core.IsProtected = function(self)
+    protection_checks = protection_checks + 1
+    return original_check(self)
+end
+local thermal = repeated.components.temperature
+local repeated_health = repeated.components.health
+for cycle = 1, 20 do
+    equip(repeated)
+    local setter, update, delta = thermal.SetTemperature, thermal.OnUpdate, repeated_health.deltamodifierfn
+    thermal.SetTemperature = function(...) return setter(...) end
+    thermal.OnUpdate = function(...) return update(...) end
+    repeated_health.deltamodifierfn = function(...) return delta(...) end
+    repeated.components.inventory:Unequip(EQUIPSLOTS.BODY)
+end
+equip(repeated)
+protection_checks = 0
+thermal:SetTemperature(-100)
+assert(protection_checks == 1, "re-equip must not stack retained temperature setters")
+assert_safe(repeated)
+protection_checks = 0
+assert(repeated_health.deltamodifierfn(repeated, -10, false, "cold") == 0)
+assert(protection_checks == 1, "re-equip must not stack retained health filters")
+local retained_update = repeated_core._temperature_wrapper
+repeated.components.inventory:Unequip(EQUIPSLOTS.BODY)
+thermal:SetTemperature(-20)
+close(thermal.current, -20, "retained setter must be inert without amulet")
+equip(repeated)
+assert(repeated_core._temperature_wrapper == retained_update, "reuse retained update wrapper")
+repeated_core:OnRemoveFromEntity()
+thermal:SetTemperature(-20)
+close(thermal.current, -20, "retained setter must be inert after component removal")
+
 local removed_native_update, removed_native_set = removed_thermal.components.temperature.OnUpdate, removed_thermal.components.temperature.SetTemperature
 equip(removed_thermal)
 removed_thermal_core:OnRemoveFromEntity()

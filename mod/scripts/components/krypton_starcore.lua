@@ -174,24 +174,27 @@ function KryptonStarcore:InstallTemperatureProtection()
 end
 
 function KryptonStarcore:RemoveTemperatureProtection()
+    -- A later mod may still hold our closure. Keep its identity until we can
+    -- actually detach it; otherwise the next equip wraps that chain again.
+    -- Retained closures use IsProtected, so unequip/death/removal disables them.
     if self._temperature_set_component ~= nil and self._temperature_set_component.SetTemperature == self._temperature_set_wrapper then
         self._temperature_set_component.SetTemperature = self._temperature_set_previous
+        self._temperature_set_component = nil
+        self._temperature_set_previous = nil
+        self._temperature_set_wrapper = nil
     end
-    self._temperature_set_component = nil
-    self._temperature_set_previous = nil
-    self._temperature_set_wrapper = nil
     if self._temperature_component ~= nil and self._temperature_component.OnUpdate == self._temperature_wrapper then
         self._temperature_component.OnUpdate = self._temperature_previous
+        self._temperature_component = nil
+        self._temperature_previous = nil
+        self._temperature_wrapper = nil
     end
-    self._temperature_component = nil
-    self._temperature_previous = nil
-    self._temperature_wrapper = nil
     if self._delta_health ~= nil and self._delta_health.deltamodifierfn == self._delta_wrapper then
         self._delta_health.deltamodifierfn = self._delta_previous
+        self._delta_health = nil
+        self._delta_previous = nil
+        self._delta_wrapper = nil
     end
-    self._delta_health = nil
-    self._delta_previous = nil
-    self._delta_wrapper = nil
 end
 
 function KryptonStarcore:RefreshProtection()

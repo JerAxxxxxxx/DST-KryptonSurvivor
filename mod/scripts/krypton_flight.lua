@@ -145,7 +145,12 @@ local function CheckBounds(inst)
     if not TheWorld.ismastersim and inst ~= ThePlayer then return end
     local x, y, z = inst.Transform:GetWorldPosition()
     if IsInBounds(x, y, z) then
-        inst._krypton_flight_lastposition = { x = x, y = y, z = z }
+        local last = inst._krypton_flight_lastposition
+        if last == nil then
+            last = {}
+            inst._krypton_flight_lastposition = last
+        end
+        last.x, last.y, last.z = x, y, z
     elseif Flight.IsFlying(inst) then
         local last = inst._krypton_flight_lastposition
         -- The map is centred on (0, 0); this fallback is only for an already
