@@ -4,7 +4,7 @@
 
 将 DC 超人带入 Steam《饥荒联机版》。高属性、完整夜视、热视线、冰冻吐息、飞行、地图瞬移与黑暗形态，搭配专属战斧**拉奥之锋**与**星核护符**，适合与朋友轻松探索和战斗。
 
-**当前代码版本：0.12.3，已完成整体游戏试玩。Steam 创意工坊上次确认版本为 0.11.0，0.12.3 的发布资料已准备，待上传确认。** 本版包含黑暗战衣、Steam 服装切换修正、飞行显示与腰部切片修正，以及模组列表图标。支持中文和英语；完整改动见[更新记录](docs/changelog.md)。
+**当前代码版本：0.12.3，已完成整体游戏试玩。Steam 创意工坊已更新至 0.12.3，包含自 0.11.0 以来的全部更新。** 本版包含黑暗战衣、Steam 服装切换修正、飞行显示与腰部切片修正，以及模组列表图标。支持中文和英语；完整改动见[更新记录](docs/changelog.md)。
 
 [Steam 创意工坊](https://steamcommunity.com/sharedfiles/filedetails/?id=3811663817) · [更新记录](docs/changelog.md) · [开发说明](docs/build.md) · [反馈问题](https://github.com/JerAxxxxxxx/DST-KryptonSurvivor/issues)
 
