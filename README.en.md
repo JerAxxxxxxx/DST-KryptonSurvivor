@@ -4,7 +4,7 @@
 
 Bring DC's Superman to **Don't Starve Together** on Steam. Enjoy powerful stats, full night vision, heat vision, frost breath, flight, map teleportation, Dark Superman form, the exclusive axe **Rao's Edge** and the **Starcore Amulet**. Built for relaxed exploration and overpowered combat with friends.
 
-**Current code version: 0.12.3**, with the overall in-game playtest complete. The last confirmed Steam Workshop version is **0.11.0**; the 0.12.3 upload materials are ready, awaiting upload confirmation. This version includes the black suit, complete outfit restoration, flight visibility and waist-sprite fixes, and the mod-list icon. Supports Chinese and English. See the [changelog](docs/changelog.md) for the full update history.
+**Current code version: 0.12.3**, with the overall in-game playtest complete. Steam Workshop has been updated to **0.12.3**, including all changes since 0.11.0. This version includes the black suit, complete outfit restoration, flight visibility and waist-sprite fixes, and the mod-list icon. Supports Chinese and English. See the [changelog](docs/changelog.md) for the full update history.
 
 [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3811663817) · [Changelog](docs/changelog.md) · [Development guide](docs/build.md) · [Report an issue](https://github.com/JerAxxxxxxx/DST-KryptonSurvivor/issues)
 
